@@ -11,10 +11,17 @@ import threading
 import os
 import time
 from pprint import pprint
+from TypeEnforcement import type_enforcer as t
+import typing
 
+try:
+    from . import SocketOpts as SO
+except:
+    import SocketOpts as SO
 
-class CLI:
-    def __init__(self, IP, PORT):
+class CLI(SO.SocketOpts):
+    @t.TypeEnforcer.enforcer
+    def __init__(self, IP: str, PORT: int):
         self.ip, self.port = IP, PORT
         self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
 
@@ -43,24 +50,11 @@ class CLI:
         self.confirmation_commands = ['restart_pod', 'delete_pod', 'delete_app', 'delete_system'] # need confirmation
         self.subclients = ['neo4j'] # need separate CLI
 
-    def json_send(self, data): # package data in json and send
-        json_data = json.dumps(data)
-        self.connection.send(bytes((json_data), ('utf-8')))
-
-    def json_receive(self): # Receive and unpack json 
-        json_data = ""
-        while True:
-            try: #to handle long files, so that it continues to receive data and create a complete file
-                json_data = json_data + self.connection.recv(1024).decode('utf-8') #formulate a full file. Combine sequential data streams to unpack
-                return json.loads(json_data) #this is necessary whenever transporting any large amount of data over TCP streams
-            except ValueError:
-                continue
-
     def initialize_server(self): # function detects operating system. Runs OS command to start the server
         if 'win' in sys.platform: # windows
-            os.system(r"pythonw C:\Users\ahuma\Desktop\Programming\python_programs\REHS2022\Final-Project\Final-project-notebooks\TapisCLI\client-server\server.py")
+            os.system(r"pythonw .\server.py")
         else: # unix based
-            os.system(r"python C:\Users\ahuma\Desktop\Programming\python_programs\REHS2022\Final-Project\Final-project-notebooks\TapisCLI\client-server\server.py &")
+            os.system(r"python .\server.py &")
 
     def connection_initialization(self): # patience. This sometimes takes a while
         startup_flag = False # flag to tell code not to run multiple server setup threads at once
@@ -91,8 +85,8 @@ class CLI:
                     continue
 
     def connect(self):
-        #self.connection_initialization() # connect to the server
-        self.connection.connect((self.ip, self.port)) # enable me for debugging. Requires manual server start
+        self.connection_initialization() # connect to the server
+        #self.connection.connect((self.ip, self.port)) # enable me for debugging. Requires manual server start
         connection_info = self.json_receive() # receive info from the server whether it is a first time connection
         if connection_info['connection_type'] == "initial": # if the server is receiving its first connection for the session\
             while True:
@@ -116,11 +110,13 @@ class CLI:
             username, url = connection_info['username'], connection_info['url'] # receive username and URL
             return username, url # return username and url
 
-    def process_command(self, command): # process CLI application input (when user enters dedicated CLI)
+    @t.TypeEnforcer.enforcer(recursive=True)
+    def process_command(self, command: str) -> list[str]: # process CLI application input (when user enters dedicated CLI)
         command = command.split(' ') # split the command into a list for processing
         return command
 
-    def expression_input(self): # for subclients. Pods and apps running through Tapis will have their own inputs. This gives user an interface
+    @t.TypeEnforcer.enforcer
+    def expression_input(self) -> str: # for subclients. Pods and apps running through Tapis will have their own inputs. This gives user an interface
         print("Enter 'exit' to submit") # user must enter exit to submit their input
         expression = ''
         while True: # handles multiple lines of input. Good for neo4j expressions
@@ -130,7 +126,9 @@ class CLI:
             expression += line
         return expression
 
-    def check_command(self, **kwargs): # runs command checking operations for special functions
+
+    @t.TypeEnforcer.enforcer(recursive=True)
+    def check_command(self, **kwargs: dict) -> dict[str, str]: # runs command checking operations for special functions
         command = kwargs['command']
         if command in self.password_commands: # does the command need password confirmation?
             kwargs['password'] = getpass(f"{command} password: ") # enter password separately and securely
@@ -143,7 +141,8 @@ class CLI:
             
         return kwargs
 
-    def command_operator(self, kwargs, exit_=False): # parses command input
+    @t.TypeEnforcer.enforcer(recursive=True)
+    def command_operator(self, kwargs: dict[str,str], exit_: bool=False): # parses command input
         if isinstance(kwargs, list): # check if the command input is from the CLI, or direct input
             try:
                 kwargs = vars(self.parser.parse_args(kwargs)) # parse the arguments

@@ -1,1 +1,5 @@
-1. Add a way to more easily navigate the file system. IMplement a way to navigate it like cd and ls in linux.
+This is a disaster for now, I did not document properly initially and now I have to figure everything out
+
+Restructuring is needed
+
+"Authenticated Icicle Clients V1"                

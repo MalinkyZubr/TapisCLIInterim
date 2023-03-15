@@ -6,6 +6,8 @@ import pyperclip
 from tapipy import tapis
 import tapipy
 from py2neo import Graph
+import typing
+from TypeEnforcement import type_enforcer as t
 
 
 class tapisObject:
@@ -16,7 +18,7 @@ class tapisObject:
 
         dirname = os.path.dirname(__file__)
         root_path = re.findall(r'^(.*?\\TapisCLI)', dirname)[0]
-        rel_path = r"\subsystems\help.json"
+        rel_path = r".\help.json"
         self.help_path = f'{root_path}{rel_path}'
 
         with open(self.help_path, 'r') as h:
@@ -28,12 +30,12 @@ class Systems(tapisObject):
     def return_formatter(self, info):
         return f"id: {info.id}\nhost: {info.host}\n"
 
-    def get_system_list(self, **kwargs): # return a list of systems active on the account
+    def get_system_list(self, verbose: bool): # return a list of systems active on the account
         try:
             systems = self.t.systems.getSystems()
-            if systems and kwargs['verbose']:
+            if systems and verbose:
                 return str(systems)
-            elif systems and not kwargs['verbose']:
+            elif systems and not verbose:
                 systems = [self.return_formatter(system) for system in systems]
                 systems_string = ''
                 for system in systems:
@@ -44,59 +46,52 @@ class Systems(tapisObject):
         except Exception as e:
             raise e
 
-    def get_system_info(self, **kwargs): # get information about a system given its ID
+    @t.TypeEnforcer.enforcer
+    def get_system_info(self, verbose: bool): # get information about a system given its ID
         try:
-            system_info = self.t.systems.getSystem(systemId=kwargs["id"])
-            if kwargs['verbose']:
+            system_info = self.t.systems.getSystem(systemId=id)
+            if verbose:
                 return str(system_info)
             return self.return_formatter(system_info)
         except Exception as e:
             raise e
         
-    def create_system(self, **kwargs): # create a tapius system. Takes a path to a json file with all system information, as well as an ID
-        try:
-            with open(kwargs['file'], 'r') as f:
-                system = json.loads(f.read())
-            system_id = system['id']
-            self.t.systems.createSystem(**system)
-            return str(system_id)
-        except Exception as e:
-            raise e
+    @t.TypeEnforcer.enforcer
+    def create_system(self, file: str, id: str) -> str: # create a tapius system. Takes a path to a json file with all system information, as well as an ID
+        with open(file, 'r') as f:
+            system = json.loads(f.read())
+        self.t.systems.createSystem(**system)
+        return str
+    
+    @t.TypeEnforcer.enforcer
+    def system_credential_upload(self, file: str) -> str: # upload key credentials for the system
+        with open(file.split(",")[0], 'r') as f:
+            private_key = f.read()
 
-    def system_credential_upload(self, **kwargs): # upload key credentials for the system
-        try:
-            with open(kwargs['file'].split(",")[0], 'r') as f:
-                private_key = f.read()
+        with open(file.split(",")[1], 'r') as f:
+            public_key = f.read()
 
-            with open(kwargs['file'].split(",")[1], 'r') as f:
-                public_key = f.read()
+        cred_return_value = self.t.systems.createUserCredential(systemId=id,
+                            userName=self.username,
+                            privateKey=private_key,
+                            publicKey=public_key)
 
-            cred_return_value = self.t.systems.createUserCredential(systemId=kwargs['id'],
-                                userName=self.username,
-                                privateKey=private_key,
-                                publicKey=public_key)
+        return str(cred_return_value)
 
-            return str(cred_return_value)
-        except Exception as e:
-            raise e
+    @t.TypeEnforcer.enforcer
+    def system_password_set(self, id: str, password: str) -> str: # set the password for a system
+        password_return_value = self.t.systems.createUserCredential(systemId=id, # will put this in a getpass later
+                            userName=self.username,
+                            password=password)
+        return str(password_return_value)
 
-    def system_password_set(self, **kwargs): # set the password for a system
-        try:
-            password_return_value = self.t.systems.createUserCredential(systemId=kwargs['id'], # will put this in a getpass later
-                                userName=self.username,
-                                password=kwargs['password'])
-            return str(password_return_value)
-        except Exception as e:
-            raise e
+    @t.TypeEnforcer.enforcer
+    def delete_system(self, id: str) -> str:
+        return_value = self.t.systems.deleteSystem(systemId=id)
+        return return_value
 
-    def delete_system(self, **kwargs):
-        try:
-            return_value = self.t.systems.deleteSystem(systemId=kwargs['id'])
-            return return_value
-        except Exception as e:
-            raise e
-
-    def systems_cli(self, **kwargs): # function for managing all of the system commands, makes life easier later
+    @t.TypeEnforcer.enforcer
+    def systems_cli(self, **kwargs: dict): # function for managing all of the system commands, makes life easier later
         command = kwargs['command']
         try:
             match command:
@@ -125,25 +120,23 @@ class Neo4jCLI(tapisObject):
         super().__init__(tapis_object, uname, pword)
         self.t = tapis_object
    
-    def submit_query(self, **kwargs): # function to submit queries to a Neo4j knowledge graph
-        id_ = kwargs['id']
-        uname, pword = self.t.pods.get_pod_credentials(pod_id=id_).user_username, self.t.pods.get_pod_credentials(pod_id=id_).user_password
-        graph = Graph(f"bolt+ssc://{id_}.pods.icicle.tapis.io:443", auth=(uname, pword), secure=True, verify=True)
-        if kwargs['file']:
-            with open(kwargs['file'], 'r') as f:
+    @t.TypeEnforcer.enforcer
+    def submit_query(self, file: str, id: str) -> str: # function to submit queries to a Neo4j knowledge graph
+        uname, pword = self.t.pods.get_pod_credentials(pod_id=id).user_username, self.t.pods.get_pod_credentials(pod_id=id).user_password
+        graph = Graph(f"bolt+ssc://{id}.pods.icicle.tapis.io:443", auth=(uname, pword), secure=True, verify=True)
+        if file:
+            with open(file, 'r') as f:
                 expression = f.read()
-        else:
-            expression = kwargs['expression']
         
         try:
             return_value = graph.run(expression)
             print(type(return_value))
             if str(return_value) == '(No data)' and 'create' in expression.lower(): # if no data is returned (mostly if something is created) then just say 'success'
-                return f'[+][{id_}@pods.icicle.tapis.io:443] Success'
+                return f'[+][{id}@pods.icicle.tapis.io:443] Success'
             elif str(return_value) == '(No data)':
-                return f'[-][{id_}@pods.icicle.tapis.io:443] KG is empty'
+                return f'[-][{id}@pods.icicle.tapis.io:443] KG is empty'
 
-            return str(f'[+][{id_}] {return_value}')
+            return str(f'[+][{id}] {return_value}')
         except Exception as e:
             return str(e)
 
@@ -152,85 +145,69 @@ class Pods(tapisObject):
     def return_formatter(self, info):
         return f"pod_id: {info.pod_id}\npod_template: {info.pod_template}\nurl: {info.url}\nstatus_requested: {info.status_requested}\n\n"
 
-    def get_pods(self, **kwargs): # returns a list of pods
+    @t.TypeEnforcer.enforcer
+    def get_pods(self, verbose: bool) -> str: # returns a list of pods
         pods_list = self.t.pods.get_pods()
-        if kwargs['verbose']:
+        if verbose:
             return str(pods_list)
         pods_list = [self.return_formatter(pod) for pod in pods_list]
         pods_string = ""
         for pod in pods_list:
             pods_string += str(pod)
         return pods_string
-        
-    def whoami(self, **kwargs): # returns user information
+    
+    @t.TypeEnforcer.enforcer
+    def whoami(self, verbose: bool) -> str: # returns user information
         user_info = self.t.authenticator.get_userinfo()
-        if kwargs['verbose']:
+        if verbose:
             return str(user_info)
         return user_info.username
 
-    def create_pod(self, **kwargs): # creates a pod with a pod id, template, and description
-        try:
-            pod_description = kwargs['description']#str(input("Enter your pod description below:\n")) 
-            pod_information = self.t.pods.create_pod(pod_id=kwargs['id'], pod_template=kwargs['template'], description=pod_description)
-            if kwargs['verbose']:
-                return str(pod_information)
-            return self.return_formatter(pod_information)
-        except Exception as e:
-            raise e
+    @t.TypeEnforcer.enforcer
+    def create_pod(self, description: str, id: str, template: str, verbose: bool) -> str: # creates a pod with a pod id, template, and description
+        pod_information = self.t.pods.create_pod(pod_id=id, pod_template=template, description=description)
+        if verbose:
+            return str(pod_information)
+        return self.return_formatter(pod_information)
 
-    def restart_pod(self, **kwargs): # restarts a pod if needed
-        try:
-            return_information = self.t.pods.restart_pod(pod_id=kwargs["id"])
-            if kwargs['verbose']:
-                return str(return_information)
-            return self.return_formatter(return_information)
-        except Exception as e:
-            raise e
-
-    def delete_pod(self, **kwargs): # deletes a pod
-        try:
-            return_information = self.t.pods.delete_pod(pod_id=kwargs["id"])
-            if kwargs['verbose']:
-                return str(return_information)
-            return self.return_formatter(return_information)
-        except Exception as e:
-            raise e
-
-    def set_pod_perms(self, **kwargs): # set pod permissions, given a pod id, user, and permission level
-        try:
-            return_information = self.t.pods.set_pod_permission(pod_id=kwargs["id"], user=kwargs['username'], level=kwargs['level'])
+    @t.TypeEnforcer.enforcer
+    def restart_pod(self, id: str, verbose: bool) -> str: # restarts a pod if needed
+        return_information = self.t.pods.restart_pod(pod_id=id)
+        if verbose:
             return str(return_information)
-        except tapipy.errors.BaseTapyException:
-            raise Exception('Invalid level given')
-        except Exception as e:
-            raise e
+        return self.return_formatter(return_information)
+
+    @t.TypeEnforcer.enforcer
+    def delete_pod(self, id: str, verbose: bool) -> str: # deletes a pod
+            return_information = self.t.pods.delete_pod(pod_id=id)
+            if verbose:
+                return str(return_information)
+            return self.return_formatter(return_information)
+
+    @t.TypeEnforcer.enforcer
+    def set_pod_perms(self, id: str, username: str, level: str) -> str: # set pod permissions, given a pod id, user, and permission level
+        return_information = self.t.pods.set_pod_permission(pod_id=id, user=username, level=level)
+        return str(return_information)
     
-    def delete_pod_perms(self, **kwargs): # take away someones perms if they are being malicious, or something
-        try:
-            return_information = self.t.pods.delete_pod_perms(pod_id=kwargs["id"], user=kwargs['username'])
-            return str(return_information)
-        except Exception as e:
-            raise e
+    @t.TypeEnforcer.enforcer
+    def delete_pod_perms(self, id: str, username: str) -> str: # take away someones perms if they are being malicious, or something
+        return_information = self.t.pods.delete_pod_perms(pod_id=id, user=username)
+        return str(return_information)
 
-    def get_perms(self, **kwargs): # return a list of permissions on a given pod
-        try:
-            return_information = self.t.pods.get_pod_permissions(pod_id=kwargs["id"])
-            return str(return_information)
-        except IndexError:
-            raise Exception('enter valid pod id, see help')
-        except Exception as e:
-            raise e
+    @t.TypeEnforcer.enforcer
+    def get_perms(self, id: str) -> str: # return a list of permissions on a given pod
+        return_information = self.t.pods.get_pod_permissions(pod_id=id)
+        return str(return_information)
 
-    def copy_pod_password(self, **kwargs): # copies the pod password to clipboard so that the user can access the pod via the neo4j desktop app. Maybe a security risk? not as bad as printing passwords out!
-        try:
-            password = self.t.pods.get_pod_credentials(pod_id=kwargs["id"]).user_password
-            pyperclip.copy(password)
-            password = None
-            return 'copied to clipboard'
-        except Exception as e:
-            raise e
+    @t.TypeEnforcer.enforcer
+    def copy_pod_password(self, id: str) -> str: # copies the pod password to clipboard so that the user can access the pod via the neo4j desktop app. Maybe a security risk? not as bad as printing passwords out!
+        password = self.t.pods.get_pod_credentials(pod_id=id).user_password
+        pyperclip.copy(password)
+        password = None
+        return 'copied to clipboard'
 
-    def pods_cli(self, **kwargs):
+    @t.TypeEnforcer.enforcer
+    def pods_cli(self, **kwargs: dict):
         command = kwargs['command']
         try:
             match command:
@@ -262,41 +239,37 @@ class Files(tapisObject):
     def return_formatter(self, info):
         return f"name: {info.name}\ngroup: {info.group}\npath: {info.path}\n"
 
-    def list_files(self, **kwargs): # lists files available on a tapis account
-        try:
-            file_list = self.t.files.listFiles(systemId=kwargs['id'], path=kwargs['file'])
-            if kwargs['verbose']:
-                return str(file_list)
-            file_list = [self.return_formatter(f) for f in file_list]
-        except Exception as e:
-            raise e
+    @t.TypeEnforcer.enforcer
+    def list_files(self, verbose: bool, id: str, file: str) -> str: # lists files available on a tapis account
+        file_list = self.t.files.listFiles(systemId=id, path=file)
+        if verbose:
+            return str(file_list)
+        file_list = [self.return_formatter(f) for f in file_list]
+        return str(file_list)
 
-    def upload(self, **kwargs): # upload a file from local to remote using tapis. Takes source and destination paths
-        try:
-            source = kwargs["file"].split(",")[0]
-            destination = kwargs["file"].split(",")[1]
-            self.t.upload(system_id=kwargs['id'],
-                    source_file_path=source,
-                    dest_file_path=destination)
-            return f'successfully uploaded {source} to {destination}'
-        except:
-            raise Exception(f'failed to upload {source} to {destination}')
+    @t.TypeEnforcer.enforcer
+    def upload(self, file: str, id: str) -> str: # upload a file from local to remote using tapis. Takes source and destination paths
+        source = file.split(",")[0]
+        destination = file.split(",")[1]
+        self.t.upload(system_id=id,
+                source_file_path=source,
+                dest_file_path=destination)
+        return f'successfully uploaded {source} to {destination}'
             
-    def download(self, **kwargs): # download a remote file using tapis, operates basically the same as upload
-        try:
-            source = kwargs["file"].split(",")[0]
-            destination = kwargs["file"].split(",")[1]
-            file_info = self.t.files.getContents(systemId=kwargs['id'],
-                                path=source)
+    @t.TypeEnforcer.enforcer
+    def download(self, file: str, id: str) -> str: # download a remote file using tapis, operates basically the same as upload
+        source = file.split(",")[0]
+        destination = file.split(",")[1]
+        file_info = self.t.files.getContents(systemId=id,
+                            path=source)
 
-            file_info = file_info.decode('utf-8')
-            with open(destination, 'w') as f:
-                f.write(file_info)
-            return f'successfully downloaded {source} to {destination}'
-        except:
-            raise Exception(f'failed to download {source} to {destination}')
+        file_info = file_info.decode('utf-8')
+        with open(destination, 'w') as f:
+            f.write(file_info)
+        return f'successfully downloaded {source} to {destination}'
 
-    def files_cli(self, **kwargs): # function to manage all the file commands
+    @t.TypeEnforcer.enforcer
+    def files_cli(self, **kwargs: dict): # function to manage all the file commands
         command = kwargs['command']
         try:
             match command:
@@ -317,72 +290,59 @@ class Files(tapisObject):
 
 
 class Apps(tapisObject):
-    def create_app(self, **kwargs): # create a tapis app taking a json descriptor file path
-        try:
-            with open(kwargs['file'], 'r') as f:
-                app_def = json.loads(f.read())
-            url = self.t.apps.createAppVersion(**app_def)
-            return f"App created successfully\nID: {app_def['id']}\nVersion: {app_def['version']}\nURL: {url}\n"
-        except Exception as e:
-            raise e
+    @t.TypeEnforcer.enforcer
+    def create_app(self, file: str) -> str: # create a tapis app taking a json descriptor file path
+        with open(file, 'r') as f:
+            app_def = json.loads(f.read())
+        url = self.t.apps.createAppVersion(**app_def)
+        return f"App created successfully\nID: {app_def['id']}\nVersion: {app_def['version']}\nURL: {url}\n"
 
-    def get_apps(self, **kwargs):
-        try:
-            apps = self.t.apps.getApps()
-            return str(apps)
-        except Exception as e:
-            raise e
+    @t.TypeEnforcer.enforcer
+    def get_apps(self, **kwargs: typing.Any) -> str:
+        apps = self.t.apps.getApps()
+        return str(apps)
 
-    def delete_app(self, **kwargs):
-        try:
-            return_value = self.t.apps.deleteApp(appId=kwargs['id'], appVersion=kwargs['version'])
-            return str(return_value)
-        except Exception as e:
-            raise e
+    @t.TypeEnforcer.enforcer
+    def delete_app(self, id: str, version: str) -> str:
+        return_value = self.t.apps.deleteApp(appId=id, appVersion=version)
+        return str(return_value)
 
-    def get_app(self, **kwargs): # returns app information with an id and version as arguments
-        try:
-            app = self.t.apps.getApp(appId=kwargs['id'], appVersion=kwargs['version'])
-            if kwargs['verbose']:
-                return str(app)
-            return 
-        except Exception as e:
-            raise e
+    @t.TypeEnforcer.enforcer
+    def get_app(self, verbose: bool, id: str, version: str)-> None | str: # returns app information with an id and version as arguments
+        app = self.t.apps.getApp(appId=id, appVersion=version)
+        if verbose:
+            return str(app)
+        return None
 
-    def run_job(self, **kwargs): # run a job using an app. Takes a job descriptor json file path
-        try:
-            with open(kwargs['file'], 'r') as f:
-                app_args = json.loads(f.read())
+    @t.TypeEnforcer.enforcer
+    def run_job(self, file: str, name: str, id: str, version: str)->str: # run a job using an app. Takes a job descriptor json file path
+        with open(file, 'r') as f:
+            app_args = json.loads(f.read())
 
-            job = {
-                "name": kwargs['name'],
-                "appId": kwargs['id'], 
-                "appVersion": kwargs['version'],
-                "parameterSet": {"appArgs": [app_args]        
-                                }
-            }
-            job = self.t.jobs.submitJob(**job)
-            return str(job.uuid)
-        except Exception as e:
-            raise e
+        job = {
+            "name": name,
+            "appId": id, 
+            "appVersion": version,
+            "parameterSet": {"appArgs": [app_args]        
+                            }
+        }
+        job = self.t.jobs.submitJob(**job)
+        return str(job.uuid)
 
-    def get_job_status(self, **kwargs): # return a job status with its Uuid
-        try:
-            job_status = self.t.jobs.getJobStatus(jobUuid=kwargs['uuid'])
-            return str(job_status)
-        except Exception as e:
-            raise e
+    @t.TypeEnforcer.enforcer
+    def get_job_status(self, uuid: str)->str: # return a job status with its Uuid
+        job_status = self.t.jobs.getJobStatus(jobUuid=uuid)
+        return str(job_status)
 
-    def download_job_output(self, **kwargs): # download the output of a job with its Uuid
-        try:
-            jobs_output = self.t.jobs.getJobOutputDownload(jobUuid=kwargs['uuid'], outputPath='tapisjob.out')
-            with open(kwargs['file'], 'w') as f:
-                f.write(jobs_output)
-            return f"Successfully downloaded job output to {kwargs['file']}"
-        except Exception as e:
-            raise e
+    @t.TypeEnforcer.enforcer
+    def download_job_output(self, uuid: str, file: str)->str: # download the output of a job with its Uuid
+        jobs_output = self.t.jobs.getJobOutputDownload(jobUuid=uuid, outputPath='tapisjob.out')
+        with open(file, 'w') as f:
+            f.write(jobs_output)
+        return f"Successfully downloaded job output to {file}"
 
-    def apps_cli(self, **kwargs): # function to manage all jobs
+    @t.TypeEnforcer.enforcer
+    def apps_cli(self, **kwargs: dict): # function to manage all jobs
         command = kwargs['command']
         try:
             match command:

@@ -5,25 +5,32 @@ from getpass import getpass
 import time
 import re
 from tapipy.tapis import Tapis
+import tapipy.tapis
 import socket
 import json
 import threading
 import multiprocessing
 import os
 import logging
-from tapisObjectWrappers import Files, Apps, 
+from tapisObjectWrappers import Files, Apps, Pods, Systems, Neo4jCLI
+from TypeEnforcement import type_enforcer as t
+import typing
+
+try:
+    from . import SocketOpts as SO
+except:
+    import SocketOpts as SO
 
 
-class Server:
-    def __init__(self, IP, PORT):
+class Server(SO.SocketOpts):
+    @t.TypeEnforcer.enforcer
+    def __init__(self, IP: str, PORT: int):
         # logger setup
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
         stream_handler = logging.StreamHandler(stream=sys.stdout)
 
         log_path = r"\logs"
-        sys.path.insert(
-            1, f'{root_path}{rel_path}')
         file_handler = logging.FileHandler(
             r'logs.log', mode='w')
         stream_handler.setLevel(logging.INFO)
@@ -68,7 +75,8 @@ class Server:
         # get help file location
         self.help_path = r'\subsystems'
 
-    def tapis_init(self, username, password):  # initialize the tapis opject
+    @t.TypeEnforcer.enforcer(recursive=True)
+    def tapis_init(self, username: str, password: str) -> tuple(tapipy.tapis, str, str):  # initialize the tapis opject
         start = time.time()
         base_url = "https://icicle.tapis.io"
         t = Tapis(base_url=base_url,
@@ -91,23 +99,8 @@ class Server:
 
         return t, url, access_token
 
-    def json_send(self, data):  # package data in json and send
-        json_data = json.dumps(data)
-        self.connection.send(bytes((json_data), ('utf-8')))
-
-    def json_receive(self):  # Receive and unpack json
-        json_data = ""
-        while True:
-            try:  # to handle long files, so that it continues to receive data and create a complete file
-                # formulate a full file. Combine sequential data streams to unpack
-                json_data = json_data + \
-                    self.connection.recv(1024).decode('utf-8')
-                # this is necessary whenever transporting any large amount of data over TCP streams
-                return json.loads(json_data)
-            except ValueError:
-                continue
-
-    def accept(self, initial=False):  # function to accept CLI connection to the server
+    @t.TypeEnforcer.enforcer(recursive=True)
+    def accept(self, initial: bool=False) -> tuple[str, str, typing.Any, str, str]:  # function to accept CLI connection to the server
         self.connection, ip_port = self.sock.accept()  # connection request is accepted
         self.logger.info("Received connection request")
         if initial:  # if this is the first time in the session that the cli is connecting
@@ -145,7 +138,8 @@ class Server:
             self.logger.info("Connection success")
 
     # handle shutdown scenarios for the server
-    def shutdown_handler(self, result, exit_status):
+    @t.TypeEnforcer.enforcer
+    def shutdown_handler(self, result: str, exit_status: int):
         if result == '[+] Shutting down':  # if the server receives a request to shut down
             self.logger.info("Shutdown initiated")
             sys.exit(0)  # shut down the server
@@ -162,7 +156,8 @@ class Server:
             self.connection.close()  # close connection and shutdown server
             os._exit(0)
 
-    def run_command(self, **kwargs):  # process and run commands
+    @t.TypeEnforcer.enforcer
+    def run_command(self, **kwargs: dict):  # process and run commands
         command_group = kwargs['command_group']
         try:
             match command_group:
@@ -175,9 +170,7 @@ class Server:
                 case 'apps':
                     return self.apps.apps_cli(**kwargs)
                 case 'help':
-                    sys.path.insert(
-                        1, f'{root_path}{self.help_path}')
-                    with open(r'C:\Users\ahuma\Desktop\Programming\python_programs\REHS2022\Final-Project\Final-project-notebooks\TapisCLI\subsystems\help.json', 'r') as f:
+                    with open(r'.\help.json', 'r') as f:
                         return json.load(f)
                 case 'whoami':
                     return self.pods.whoami(**kwargs)

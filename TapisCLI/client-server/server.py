@@ -13,7 +13,7 @@ import multiprocessing
 import os
 import logging
 from tapisObjectWrappers import Files, Apps, Pods, Systems, Neo4jCLI
-from TypeEnforcement import type_enforcer as t
+from TypeEnforcement.type_enforcer import TypeEnforcer
 import typing
 
 try:
@@ -23,7 +23,7 @@ except:
 
 
 class Server(SO.SocketOpts):
-    @t.TypeEnforcer.enforcer
+    @TypeEnforcer.enforcer(recursive=True)
     def __init__(self, IP: str, PORT: int):
         # logger setup
         self.logger = logging.getLogger(__name__)
@@ -75,8 +75,8 @@ class Server(SO.SocketOpts):
         # get help file location
         self.help_path = r'\subsystems'
 
-    @t.TypeEnforcer.enforcer(recursive=True)
-    def tapis_init(self, username: str, password: str) -> tuple(tapipy.tapis, str, str):  # initialize the tapis opject
+    @TypeEnforcer.enforcer(recursive=True)
+    def tapis_init(self, username: str, password: str) -> tuple[typing.Any, str, str]:  # initialize the tapis opject
         start = time.time()
         base_url = "https://icicle.tapis.io"
         t = Tapis(base_url=base_url,
@@ -97,9 +97,10 @@ class Server(SO.SocketOpts):
         access_token = re.findall(
             r'(?<=access_token: )(.*)', str(authenticator))[0]
 
+        print(type(t))
         return t, url, access_token
 
-    @t.TypeEnforcer.enforcer(recursive=True)
+    @TypeEnforcer.enforcer(recursive=True)
     def accept(self, initial: bool=False) -> tuple[str, str, typing.Any, str, str]:  # function to accept CLI connection to the server
         self.connection, ip_port = self.sock.accept()  # connection request is accepted
         self.logger.info("Received connection request")
@@ -138,7 +139,7 @@ class Server(SO.SocketOpts):
             self.logger.info("Connection success")
 
     # handle shutdown scenarios for the server
-    @t.TypeEnforcer.enforcer
+    @TypeEnforcer.enforcer(recursive=True)
     def shutdown_handler(self, result: str, exit_status: int):
         if result == '[+] Shutting down':  # if the server receives a request to shut down
             self.logger.info("Shutdown initiated")
@@ -156,7 +157,7 @@ class Server(SO.SocketOpts):
             self.connection.close()  # close connection and shutdown server
             os._exit(0)
 
-    @t.TypeEnforcer.enforcer
+    @TypeEnforcer.enforcer(recursive=True)
     def run_command(self, **kwargs: dict):  # process and run commands
         command_group = kwargs['command_group']
         try:

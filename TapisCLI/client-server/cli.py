@@ -11,7 +11,7 @@ import threading
 import os
 import time
 from pprint import pprint
-from TypeEnforcement import type_enforcer as t
+from TypeEnforcement.type_enforcer import TypeEnforcer
 import typing
 
 try:
@@ -20,7 +20,7 @@ except:
     import SocketOpts as SO
 
 class CLI(SO.SocketOpts):
-    @t.TypeEnforcer.enforcer
+    @TypeEnforcer.enforcer(recursive=True)
     def __init__(self, IP: str, PORT: int):
         self.ip, self.port = IP, PORT
         self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
@@ -110,12 +110,12 @@ class CLI(SO.SocketOpts):
             username, url = connection_info['username'], connection_info['url'] # receive username and URL
             return username, url # return username and url
 
-    @t.TypeEnforcer.enforcer(recursive=True)
+    @TypeEnforcer.enforcer(recursive=True)
     def process_command(self, command: str) -> list[str]: # process CLI application input (when user enters dedicated CLI)
         command = command.split(' ') # split the command into a list for processing
         return command
 
-    @t.TypeEnforcer.enforcer
+    @TypeEnforcer.enforcer(recursive=True)
     def expression_input(self) -> str: # for subclients. Pods and apps running through Tapis will have their own inputs. This gives user an interface
         print("Enter 'exit' to submit") # user must enter exit to submit their input
         expression = ''
@@ -127,8 +127,8 @@ class CLI(SO.SocketOpts):
         return expression
 
 
-    @t.TypeEnforcer.enforcer(recursive=True)
-    def check_command(self, **kwargs: dict) -> dict[str, str]: # runs command checking operations for special functions
+    @TypeEnforcer.enforcer(recursive=True)
+    def check_command(self, **kwargs): # runs command checking operations for special functions
         command = kwargs['command']
         if command in self.password_commands: # does the command need password confirmation?
             kwargs['password'] = getpass(f"{command} password: ") # enter password separately and securely
@@ -141,8 +141,8 @@ class CLI(SO.SocketOpts):
             
         return kwargs
 
-    @t.TypeEnforcer.enforcer(recursive=True)
-    def command_operator(self, kwargs: dict[str,str], exit_: bool=False): # parses command input
+    @TypeEnforcer.enforcer(recursive=True)
+    def command_operator(self, kwargs, exit_: bool=False): # parses command input
         if isinstance(kwargs, list): # check if the command input is from the CLI, or direct input
             try:
                 kwargs = vars(self.parser.parse_args(kwargs)) # parse the arguments

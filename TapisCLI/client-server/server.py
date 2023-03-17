@@ -23,7 +23,7 @@ except:
 
 
 class Server(SO.SocketOpts):
-    @t.TypeEnforcer.enforcer
+    @t.TypeEnforcer.enforcer(recursive=False)
     def __init__(self, IP: str, PORT: int):
         # logger setup
         self.logger = logging.getLogger(__name__)
@@ -75,9 +75,7 @@ class Server(SO.SocketOpts):
         # get help file location
         self.help_path = r'\subsystems'
 
-    @t.TypeEnforcer.enforcer(recursive=True)
-    def tapis_init(self, username: str, password: str) -> tuple(tapipy.tapis, str, str):  # initialize the tapis opject
-        start = time.time()
+    def tapis_init(self, username: str, password: str):  # initialize the tapis opject
         base_url = "https://icicle.tapis.io"
         t = Tapis(base_url=base_url,
                   username=username,

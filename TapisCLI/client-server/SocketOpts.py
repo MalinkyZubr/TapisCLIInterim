@@ -1,11 +1,11 @@
 import socket
 import json
-from TypeEnforcement import type_enforcer as t
+from TypeEnforcement.type_enforcer import TypeEnforcer
 import typing
 
 
 class SocketOpts:
-    @t.TypeEnforcer.enforcer
+    @TypeEnforcer.enforcer(recursive=True)
     def json_receive(self) -> str | list | dict: # Receive and unpack json 
         json_data = ""
         while True:
@@ -15,7 +15,7 @@ class SocketOpts:
             except ValueError:
                 continue
     
-    @t.TypeEnforcer.enforcer
+    @TypeEnforcer.enforcer(recursive=True)
     def json_send(self, data: dict | list | str): # package data in json and send
         json_data = json.dumps(data)
         self.connection.send(bytes((json_data), ('utf-8')))

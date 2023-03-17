@@ -13,7 +13,7 @@ import multiprocessing
 import os
 import logging
 from tapisObjectWrappers import Files, Apps, Pods, Systems, Neo4jCLI
-from TypeEnforcement import type_enforcer as t
+from TypeEnforcement.type_enforcer import TypeEnforcer
 import typing
 
 try:
@@ -23,7 +23,7 @@ except:
 
 
 class Server(SO.SocketOpts):
-    @t.TypeEnforcer.enforcer(recursive=False)
+    @TypeEnforcer.enforcer(recursive=True)
     def __init__(self, IP: str, PORT: int):
         # logger setup
         self.logger = logging.getLogger(__name__)
@@ -72,10 +72,19 @@ class Server(SO.SocketOpts):
         self.neo4j = Neo4jCLI(self.t, self.username, self.password)
         self.logger.info('initialization complee')
 
-        # get help file location
-        self.help_path = r'\subsystems'
+        self.command_group_map = {
+            'pods':self.pods.pods_cli,
+            'systems':self.systems.systems_cli,
+            'files':self.files.files_cli,
+            'apps':self.apps.apps_cli,
+            'help':self.help,
+            'whoami':self.pods.whoami,
+            'exit':self.__exit
+        }
 
-    def tapis_init(self, username: str, password: str):  # initialize the tapis opject
+    @TypeEnforcer.enforcer(recursive=True)
+    def tapis_init(self, username: str, password: str) -> tuple[typing.Any, str, str] | None:  # initialize the tapis opject
+        start = time.time()
         base_url = "https://icicle.tapis.io"
         t = Tapis(base_url=base_url,
                   username=username,
@@ -95,9 +104,10 @@ class Server(SO.SocketOpts):
         access_token = re.findall(
             r'(?<=access_token: )(.*)', str(authenticator))[0]
 
+        print(type(t))
         return t, url, access_token
 
-    @t.TypeEnforcer.enforcer(recursive=True)
+    @TypeEnforcer.enforcer(recursive=True)
     def accept(self, initial: bool=False) -> tuple[str, str, typing.Any, str, str]:  # function to accept CLI connection to the server
         self.connection, ip_port = self.sock.accept()  # connection request is accepted
         self.logger.info("Received connection request")
@@ -136,8 +146,8 @@ class Server(SO.SocketOpts):
             self.logger.info("Connection success")
 
     # handle shutdown scenarios for the server
-    @t.TypeEnforcer.enforcer
-    def shutdown_handler(self, result: str, exit_status: int):
+    @TypeEnforcer.enforcer(recursive=True)
+    def shutdown_handler(self, result: str | dict, exit_status: int):
         if result == '[+] Shutting down':  # if the server receives a request to shut down
             self.logger.info("Shutdown initiated")
             sys.exit(0)  # shut down the server
@@ -153,37 +163,21 @@ class Server(SO.SocketOpts):
             self.json_send("[+] Shutting down, Timeout")
             self.connection.close()  # close connection and shutdown server
             os._exit(0)
+    
+    def help(self):
+        with open(r'help.json', 'r') as f:
+            return json.load(f)
+    
+    def __exit(self):
+        return "[+] Exiting"
+    
+    def __shutdown(self):
+        return "[+] Shutting down"
 
-    @t.TypeEnforcer.enforcer
-    def run_command(self, **kwargs: dict):  # process and run commands
+    @TypeEnforcer.enforcer(recursive=True)
+    def run_command(self, **kwargs):  # process and run commands
         command_group = kwargs['command_group']
-        try:
-            match command_group:
-                case 'pods':
-                    return self.pods.pods_cli(**kwargs)
-                case 'systems':
-                    return self.systems.systems_cli(**kwargs)
-                case 'files':
-                    return self.files.files_cli(**kwargs)
-                case 'apps':
-                    return self.apps.apps_cli(**kwargs)
-                case 'help':
-                    with open(r'.\help.json', 'r') as f:
-                        return json.load(f)
-                case 'whoami':
-                    return self.pods.whoami(**kwargs)
-                case 'exit':
-                    return "[+] Exiting"
-                case 'shutdown':
-                    return "[+] Shutting down"
-                case 'neo4j':
-                    result = self.neo4j.submit_query(**kwargs)
-                    return result
-                case _:
-                    raise Exception(
-                        f"Command {command_group} not found. See help")
-        except IndexError as e:
-            raise Exception(e)
+        print(kwargs)
 
     def main(self):
         while True:  # checks if any command line arguments were provided

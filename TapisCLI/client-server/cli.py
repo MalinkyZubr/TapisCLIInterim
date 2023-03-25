@@ -173,7 +173,7 @@ class CLI(SO.SocketOpts):
                 print(e)
             sys.exit(0)
 
-        title = pyfiglet.figlet_format("Tapiconsole", font="slant") # print the title when CLI is accessed
+        title = pyfiglet.figlet_format("__________\nTapiconsole\n__________", font="slant") # print the title when CLI is accessed
         print(title)
         
         while True: # open the CLI if no arguments provided on startup

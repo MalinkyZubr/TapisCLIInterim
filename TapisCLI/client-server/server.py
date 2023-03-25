@@ -18,11 +18,13 @@ import typing
 
 try:
     from . import SocketOpts as SO
+    from . import helpers
 except:
     import SocketOpts as SO
+    import helpers
 
 
-class Server(SO.SocketOpts):
+class Server(SO.SocketOpts, helpers.OperationsHelper):
     @TypeEnforcer.enforcer(recursive=True)
     def __init__(self, IP: str, PORT: int):
         # logger setup
@@ -73,13 +75,16 @@ class Server(SO.SocketOpts):
         self.logger.info('initialization complee')
 
         self.command_group_map = {
-            'pods':self.pods.pods_cli,
-            'systems':self.systems.systems_cli,
-            'files':self.files.files_cli,
-            'apps':self.apps.apps_cli,
+            'pods':self.pods.cli,
+            'systems':self.systems.cli,
+            'files':self.files.cli,
+            'apps':self.apps.cli
+        }
+        self.command_map = {
             'help':self.help,
             'whoami':self.pods.whoami,
-            'exit':self.__exit
+            'exit':self.__exit,
+            'shutdown':self.__shutdown
         }
 
     @TypeEnforcer.enforcer(recursive=True)
@@ -108,7 +113,7 @@ class Server(SO.SocketOpts):
         return t, url, access_token
 
     @TypeEnforcer.enforcer(recursive=True)
-    def accept(self, initial: bool=False) -> tuple[str, str, typing.Any, str, str]:  # function to accept CLI connection to the server
+    def accept(self, initial: bool=False):  # function to accept CLI connection to the server
         self.connection, ip_port = self.sock.accept()  # connection request is accepted
         self.logger.info("Received connection request")
         if initial:  # if this is the first time in the session that the cli is connecting
@@ -176,27 +181,28 @@ class Server(SO.SocketOpts):
 
     @TypeEnforcer.enforcer(recursive=True)
     def run_command(self, **kwargs):  # process and run commands
-        command_group = kwargs['command_group']
-        print(kwargs)
+        if kwargs['command_group'] in self.command_group_map:
+            command_group = self.command_group_map[kwargs['command_group']]
+            return command_group(**kwargs)
+        else:
+            command = self.command_map[kwargs['command_group']]
+            kwargs = self.filter_kwargs(command, kwargs)
+            if kwargs:
+                return command(**kwargs)
+            return command()
 
     def main(self):
         while True:  # checks if any command line arguments were provided
-            try:
-                message = self.json_receive()  # receive command request
-                self.timeout_handler()  # check if the server has timed out
-                # extract info from command
-                kwargs, exit_status = message['kwargs'], message['exit']
-                result = self.run_command(**kwargs)  # run the command
-                self.end_time = time.time() + 300  # reset the timeout
-                self.json_send(result)  # send the result to the CLI
-                # Handle any shutdown requests
-                self.shutdown_handler(result, exit_status)
-            except (ConnectionResetError, ConnectionAbortedError, ConnectionError, OSError, WindowsError, socket.error) as e:
-                self.logger.error(str(e))
-                os._exit(0)
-            except Exception as e:
-                self.logger.error(str(e))
-                self.json_send(str(e))
+            message = self.json_receive()  # receive command request
+            self.timeout_handler()  # check if the server has timed out
+            # extract info from command
+            kwargs, exit_status = message['kwargs'], message['exit']
+            result = self.run_command(**kwargs)  # run the command
+            self.end_time = time.time() + 300  # reset the timeout
+            self.json_send(result)  # send the result to the CLI
+            # Handle any shutdown requests
+            self.shutdown_handler(result, exit_status)
+
 
 
 if __name__ == '__main__':

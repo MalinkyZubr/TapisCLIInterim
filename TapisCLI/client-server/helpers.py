@@ -3,12 +3,13 @@ from TypeEnforcement.type_enforcer import TypeEnforcer
 
 
 class OperationsHelper:
-    #@TypeEnforcer.enforcer(recursive=True)
     def filter_kwargs(self, func: typing.Callable, kwargs: dict) -> dict:
         filtered = dict()
-        variables = list(func.__code__.co_varnames)
+        variables = list(func.__code__.co_varnames[:func.__code__.co_argcount])
         variables.remove('self')
         for arg in variables:
+            print(arg)
+            print(kwargs[arg])
             filtered.update({arg:kwargs[arg]})
         return filtered
 

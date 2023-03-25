@@ -196,10 +196,10 @@ class Pods(tapisObject):
 
     @TypeEnforcer.enforcer(recursive=True)
     def delete_pod(self, id: str, verbose: bool) -> str: # deletes a pod
-            return_information = self.t.pods.delete_pod(pod_id=id)
-            if verbose:
-                return str(return_information)
-            return self.return_formatter(return_information)
+        return_information = self.t.pods.delete_pod(pod_id=id)
+        if verbose:
+            return str(return_information)
+        return self.return_formatter(return_information)
 
     @TypeEnforcer.enforcer(recursive=True)
     def set_pod_perms(self, id: str, username: str, level: str) -> str: # set pod permissions, given a pod id, user, and permission level

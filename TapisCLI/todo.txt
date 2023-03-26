@@ -1,5 +1,0 @@
-This is a disaster for now, I did not document properly initially and now I have to figure everything out
-
-Restructuring is needed
-
-"Authenticated Icicle Clients V1"                

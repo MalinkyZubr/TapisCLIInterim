@@ -29,3 +29,14 @@ class Shutdown(Exception):
 
     def __str__(self):
         return "shutdown initiated"
+
+
+class Exit(Exception):
+    """
+    raise error when an exit is initiated
+    """
+    def __init__(self):
+        super().__init__(f"exit initiated")
+
+    def __str__(self):
+        return "exit initiated"

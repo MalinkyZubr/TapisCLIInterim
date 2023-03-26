@@ -119,10 +119,10 @@ class Server(SO.SocketOpts, helpers.OperationsHelper):
     def accept(self, initial: bool=False):  # function to accept CLI connection to the server
         self.connection, ip_port = self.sock.accept()  # connection request is accepted
         self.logger.info("Received connection request")
+        startup_data = schemas.StartupData(initial = initial)
+        self.json_send(startup_data.dict())
         if initial:  # if this is the first time in the session that the cli is connecting
             # tell the client that it is the first connection
-            startup_data = schemas.StartupData(initial = initial)
-            self.json_send(startup_data.dict())
             self.logger.info("Sent initial status update")
             # give the cli 3 attempts to provide authentication
             for attempt in range(1, 4):
@@ -134,10 +134,11 @@ class Server(SO.SocketOpts, helpers.OperationsHelper):
                     t, url, access_token = self.tapis_init(username, password)
                     # send to confirm to the CLI that authentication succeeded
                     self.logger.info("Verification success")
+                    startup_result = schemas.StartupData(initial = initial, username = username, url = url)
                     break
                 except Exception as e:
                     # send failure message to CLI
-                    login_failure_data = schemas.ResponseData(response_message = (e, attempt))
+                    login_failure_data = schemas.ResponseData(response_message = (str(e), attempt))
                     self.json_send(login_failure_data.dict())
                     self.logger.warning("Verification failure")
                     if attempt == 3:  # If there have been 3 login attempts
@@ -145,17 +146,16 @@ class Server(SO.SocketOpts, helpers.OperationsHelper):
                             "Attempted verification too many times. Exiting")
                         os._exit(0)  # shutdown the server
                     continue
-
+        else:
+            startup_result = schemas.StartupData(initial = initial, username = self.username, url = self.url)
         self.logger.info("Connection success")
-        startup_result = schemas.StartupData(initial = initial, username = username, url = url)
         self.json_send(startup_result.dict())
         self.logger.info("Final connection data sent")
-        return username, password, t, url, access_token
+        if initial:
+            return username, password, t, url, access_token
 
     def __exit(self):
-        self.logger.info("user exit initiated")
-        self.connection.close()  # close the connection
-        self.accept()  # wait for CLI to reconnect
+        raise exceptions.Exit
     
     def __shutdown(self):
         self.logger.info("Shutdown initiated")
@@ -173,12 +173,12 @@ class Server(SO.SocketOpts, helpers.OperationsHelper):
         command_group = command_data['command_group']
         if command_group in self.command_group_map:
             command_group = self.command_group_map[command_group]
-            return command_group(**kwargs)
+            return command_group(**command_data)
         elif command_group in self.command_map:
-            command = self.command_map[kwargs[command_group]]
-            kwargs = self.filter_kwargs(command, kwargs)
-            if kwargs:
-                return command(**kwargs)
+            command = self.command_map[command_group]
+            command_data = self.filter_kwargs(command, command_data)
+            if command_data:
+                return command(**command_data)
             return command()
         else:
             raise exceptions.CommandNotFoundError(command_group)
@@ -189,18 +189,25 @@ class Server(SO.SocketOpts, helpers.OperationsHelper):
                 message = self.schema_unpack()  
                 self.timeout_handler()  
                 kwargs, exit_status = message.kwargs, message.exit_status
-                result = self.run_command(**kwargs)
+                result = self.run_command(kwargs)
                 response = schemas.ResponseData(response_message = result)
                 self.end_time = time.time() + 300 
                 self.json_send(response.dict()) 
                 if exit_status == 1:
                     self.__exit()
             except exceptions.CommandNotFoundError as e:
-                error_response = schemas.ResponseData(response_message = e)
+                error_response = schemas.ResponseData(response_message = str(e))
                 self.json_send(error_response.dict())
             except (exceptions.TimeoutError, exceptions.Shutdown) as e:
-                error_response = schemas.ResponseData(response_message = e, exit_status=1)
+                error_response = schemas.ResponseData(response_message = str(e), exit_status=1)
                 self.json_send(error_response.dict())
+                sys.exit(0)
+            except exceptions.Exit as e:
+                self.logger.info("user exit initiated")
+                error_response = schemas.ResponseData(response_message = str(e), exit_status=1)
+                self.json_send(error_response.dict())
+                self.connection.close()  # close the connection
+                self.accept()  # wait for CLI to reconnect
 
 
 

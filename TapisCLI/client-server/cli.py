@@ -159,7 +159,7 @@ class CLI(SO.SocketOpts):
             elif response.schema_type == 'FormRequest':
                 form = self.fillout_form(response.arguments_list)
                 filled_form = schemas.FormResponse(arguments_list=form)
-            elif response.scheme_type == 'AuthRequest':
+            elif response.schema_type == 'AuthRequest':
                 username = input("Username: ")
                 password = getpass("Password: ")
                 filled_form = schemas.AuthData(username=username, password=password)
@@ -188,7 +188,7 @@ class CLI(SO.SocketOpts):
                     continue
                 self.json_send(command.dict())
                 response = self.special_forms_ops()
-                print(response)
+                pprint(response.dict())
                 if response.schema_type == 'ResponseData' and response.exit_status: # if the command was a shutdown or exit, close the program
                     sys.exit(0)
             except KeyboardInterrupt:

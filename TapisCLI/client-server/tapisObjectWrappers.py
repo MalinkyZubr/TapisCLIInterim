@@ -279,18 +279,10 @@ class Apps(tapisObject):
             return str(app)
         return None
 
-    def run_job(self, file: str, name: str, id: str, version: str)->str: # run a job using an app. Takes a job descriptor json file path
+    def run_job(self, file: str)->str: # run a job using an app. Takes a job descriptor json file path
         with open(file, 'r') as f:
-            app_args = json.loads(f.read())
-
-        job = {
-            "name": name,
-            "appId": id, 
-            "appVersion": version,
-            "parameterSet": {"appArgs": [app_args]        
-                            }
-        }
-        job = self.t.jobs.submitJob(**job)
+            app = json.loads(f.read())
+        job = self.t.jobs.submitJob(**app)
         return str(job.uuid)
 
     def get_job_status(self, uuid: str)->str: # return a job status with its Uuid

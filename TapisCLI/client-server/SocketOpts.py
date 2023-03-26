@@ -2,6 +2,21 @@ import socket
 import json
 from TypeEnforcement.type_enforcer import TypeEnforcer
 import typing
+import pydantic
+try:
+    from . import schemas
+except:
+    import schemas
+
+
+schema_types: dict = {
+        'CommandData':schemas.CommandData,
+        'AuthData':schemas.AuthData,
+        'StartupData':schemas.StartupData,
+        'ResponseData':schemas.ResponseData,
+        'FormRequest':schemas.FormRequest,
+        'FormResponse':schemas.FormResponse,
+    }
 
 
 class SocketOpts:
@@ -19,3 +34,9 @@ class SocketOpts:
     def json_send(self, data: dict | list | str): # package data in json and send
         json_data = json.dumps(data)
         self.connection.send(bytes((json_data), ('utf-8')))
+
+    @TypeEnforcer.enforcer(recursive=True)
+    def schema_unpack(self) -> typing.Type[pydantic.BaseModel]:
+        data = self.json_receive()
+        schema_type = schema_types[data[0]]
+        return schema_type(**data)

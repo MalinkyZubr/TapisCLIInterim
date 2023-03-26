@@ -17,12 +17,15 @@ from TypeEnforcement.type_enforcer import TypeEnforcer
 import typing
 
 try:
+    from . import exceptions
     from . import SocketOpts as SO
     from . import helpers
+    from . import schemas
 except:
+    import exceptions
     import SocketOpts as SO
     import helpers
-
+    import schemas
 
 class Server(SO.SocketOpts, helpers.OperationsHelper):
     @TypeEnforcer.enforcer(recursive=True)
@@ -118,90 +121,84 @@ class Server(SO.SocketOpts, helpers.OperationsHelper):
         self.logger.info("Received connection request")
         if initial:  # if this is the first time in the session that the cli is connecting
             # tell the client that it is the first connection
-            self.json_send({'connection_type': "initial"})
+            startup_data = schemas.StartupData(initial = True)
+            self.json_send(startup_data.dict())
             # give the cli 3 attempts to provide authentication
             for attempt in range(1, 4):
-                credentials = self.json_receive()  # receive the username and password
+                credentials = self.schema_unpack()  # receive the username and password
                 self.logger.info("Received credentials")
-                username, password = credentials['username'], credentials['password']
+                username, password = credentials.username, credentials.password
                 try:
                     # try intializing tapis with the supplied credentials
                     t, url, access_token = self.tapis_init(username, password)
                     # send to confirm to the CLI that authentication succeeded
-                    self.json_send([True, attempt])
                     self.logger.info("Verification success")
                     break
-                except:
+                except Exception as e:
                     # send failure message to CLI
-                    self.json_send([False, attempt])
+                    login_failure_data = schemas.Error(error = e, info = attempt)
+                    self.json_send(login_failure_data.dict())
                     self.logger.warning("Verification failure")
                     if attempt == 3:  # If there have been 3 login attempts
                         self.logger.error(
                             "Attempted verification too many times. Exiting")
                         os._exit(0)  # shutdown the server
                     continue
-            self.json_send(url)  # send the tapis URL to the CLI
-            self.logger.info("Connection success")
-            # return the tapis object and credentials
-            return username, password, t, url, access_token
-        else:  # if this is not the first connection
-            # send username, url and connection type
-            self.json_send({'connection_type': 'continuing',
-                           "username": self.username, "url": self.url})
-            self.logger.info("Connection success")
 
-    # handle shutdown scenarios for the server
-    @TypeEnforcer.enforcer(recursive=True)
-    def shutdown_handler(self, result: str | dict, exit_status: int):
-        if result == '[+] Shutting down':  # if the server receives a request to shut down
-            self.logger.info("Shutdown initiated")
-            sys.exit(0)  # shut down the server
-        # if the server receives an exit request
-        elif result == '[+] Exiting' or exit_status:
-            self.logger.info("user exit initiated")
-            self.connection.close()  # close the connection
-            self.accept()  # wait for CLI to reconnect
+        self.logger.info("Connection success")
+        startup_result = schemas.StartupData(initial = True, username = username, url = url)
+        self.json_send(startup_result.dict())
+        return username, password, t, url, access_token
+
+    def __exit(self):
+        self.logger.info("user exit initiated")
+        self.connection.close()  # close the connection
+        self.accept()  # wait for CLI to reconnect
+    
+    def __shutdown(self):
+        self.logger.info("Shutdown initiated")
+        raise exceptions.Shutdown
 
     def timeout_handler(self):  # handle timeouts
         if time.time() > self.end_time:  # if the time exceeds the timeout time
-            self.logger.error("timeout. Shutting down")
-            self.json_send("[+] Shutting down, Timeout")
-            self.connection.close()  # close connection and shutdown server
-            os._exit(0)
+            raise exceptions.TimeoutError
     
     def help(self):
         with open(r'help.json', 'r') as f:
             return json.load(f)
-    
-    def __exit(self):
-        return "[+] Exiting"
-    
-    def __shutdown(self):
-        return "[+] Shutting down"
 
-    @TypeEnforcer.enforcer(recursive=True)
-    def run_command(self, **kwargs):  # process and run commands
-        if kwargs['command_group'] in self.command_group_map:
-            command_group = self.command_group_map[kwargs['command_group']]
+    def run_command(self, command_data: dict):  # process and run commands
+        command_group = command_data['command_group']
+        if command_group in self.command_group_map:
+            command_group = self.command_group_map[command_group]
             return command_group(**kwargs)
-        else:
-            command = self.command_map[kwargs['command_group']]
+        elif command_group in self.command_map:
+            command = self.command_map[kwargs[command_group]]
             kwargs = self.filter_kwargs(command, kwargs)
             if kwargs:
                 return command(**kwargs)
             return command()
+        else:
+            raise exceptions.CommandNotFoundError(command_group)
 
     def main(self):
-        while True:  # checks if any command line arguments were provided
-            message = self.json_receive()  # receive command request
-            self.timeout_handler()  # check if the server has timed out
-            # extract info from command
-            kwargs, exit_status = message['kwargs'], message['exit']
-            result = self.run_command(**kwargs)  # run the command
-            self.end_time = time.time() + 300  # reset the timeout
-            self.json_send(result)  # send the result to the CLI
-            # Handle any shutdown requests
-            self.shutdown_handler(result, exit_status)
+        while True: 
+            try:
+                message = self.schema_unpack()  
+                self.timeout_handler()  
+                kwargs, exit_status = message.kwargs, message.exit_status
+                result = self.run_command(**kwargs)
+                response = schemas.ResponseData(response_message = result)
+                self.end_time = time.time() + 300 
+                self.json_send(response.dict()) 
+                if exit_status == 1:
+                    self.__exit()
+            except exceptions.CommandNotFoundError as e:
+                error_response = schemas.ResponseData(response_message = e)
+                self.json_send(error_response.dict())
+            except (exceptions.TimeoutError, exceptions.Shutdown) as e:
+                error_response = schemas.ResponseData(response_message = e, exit_status=1)
+                self.json_send(error_response.dict())
 
 
 

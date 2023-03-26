@@ -15,8 +15,10 @@ from TypeEnforcement.type_enforcer import TypeEnforcer
 import typing
 
 try:
+    from . import schemas
     from . import SocketOpts as SO
 except:
+    import schemas
     import SocketOpts as SO
 
 class CLI(SO.SocketOpts):
@@ -92,7 +94,8 @@ class CLI(SO.SocketOpts):
             while True:
                 username = str(input("\nUsername: ")) # take the username
                 password = getpass("Password: ") # take the password
-                self.json_send({"username":username, "password":password}) # send the username and password to the server to be used
+                auth_data = schemas.AuthData(username = username, password = password)
+                self.json_send(auth_data.dict()) # send the username and password to the server to be used
                 verification = self.json_receive() # server responds saying if the verification succeeded or not
                 if verification[0]: # verification success, program moves forward
                     print("[+] verification success")
@@ -119,13 +122,19 @@ class CLI(SO.SocketOpts):
     def expression_input(self) -> str: # for subclients. Pods and apps running through Tapis will have their own inputs. This gives user an interface
         print("Enter 'exit' to submit") # user must enter exit to submit their input
         expression = ''
-        while True: # handles multiple lines of input. Good for neo4j expressions
+        line = ''
+        while line != 'exit': # handles multiple lines of input. Good for neo4j expressions
             line = str(input("> "))
-            if line == 'exit':
-                break
             expression += line
         return expression
 
+    @TypeEnforcer.enforcer(recursive=True)
+    def fillout_form(self, form: list) -> dict:
+        filled_form = dict()
+        for field in form:
+            value = str(input(f"{field}: "))
+            filled_form.update({field:value})
+        return filled_form
 
     @TypeEnforcer.enforcer(recursive=True)
     def check_command(self, **kwargs): # runs command checking operations for special functions
@@ -142,7 +151,7 @@ class CLI(SO.SocketOpts):
         return kwargs
 
     @TypeEnforcer.enforcer(recursive=True)
-    def command_operator(self, kwargs, exit_: bool=False): # parses command input
+    def command_operator(self, kwargs, exit_: int=0): # parses command input
         if isinstance(kwargs, list): # check if the command input is from the CLI, or direct input
             try:
                 kwargs = vars(self.parser.parse_args(kwargs)) # parse the arguments
@@ -154,32 +163,41 @@ class CLI(SO.SocketOpts):
         kwargs = self.check_command(**kwargs) # check function conditions
         if not kwargs: # if confirmation failed
             raise Exception("[-] Confirmation not given. Command not executed") # raise an error, dont execute anything
-        self.json_send({'kwargs':kwargs, 'exit':exit_}) # send the json package with the command, and exit status. If exit is true, the CLI automatically exits on command execution
-        
-        result = self.json_receive() # received command result from the server
-        return result
+        command = schemas.CommandData(kwargs = kwargs, exit_datus = exit_)
+        return command
 
     def main(self):
         if len(sys.argv) > 1: # checks if any command line arguments were provided. Does not open CLI
-            try:
-                kwargs = self.parser.parse_args()
-                kwargs = vars(kwargs)
-                result = self.command_operator(kwargs, exit_=True) # operate with args, send them over
-                if isinstance(result, dict): # if get a dict back
-                    pprint(result) # pretty print
+            kwargs = self.parser.parse_args()
+            kwargs = vars(kwargs)
+            command = self.command_operator(kwargs, exit_=1) # operate with args, send them over
+            self.json_send(command.dict())
+            while True:
+                response = self.schema_unpack()
+                if response.schema_type == 'FormRequest' and not response.arguments_list:
+                    form = self.expression_input()
+                elif response.schema_type == 'FormRequest':
+                    form = self.fillout_form(response.arguments_list)
+                elif response.scheme_type == 'AuthRequest':
+                    username = input("Username: ")
+                    password = getpass("Password: ")
                 else:
-                    print(result) # just print if not a dict
-            except Exception as e:
-                print(e)
+                    break
+            if isinstance(result, dict): # if get a dict back
+                pprint(result) # pretty print
+            else:
+                print(result) # just print if not a dict
             sys.exit(0)
 
-        title = pyfiglet.figlet_format("__________\nTapiconsole\n__________", font="slant") # print the title when CLI is accessed
+        title = pyfiglet.figlet_format("---------\nTapiconsole\n---------", font="slant") # print the title when CLI is accessed
         print(title)
         
         while True: # open the CLI if no arguments provided on startup
             try:
                 kwargs = self.process_command(str(input(f"[{self.username}@{self.url}] "))) # ask for and process user input
-                result = self.command_operator(kwargs) # run operations
+                command = self.command_operator(kwargs) # run operations
+
+
                 if not result: # if any problem like bad confirmation or nonexistance happened, try again
                     continue
                 if result == '[+] Exiting' or '[+] Shutting down' in result: # if the command was a shutdown or exit, close the program

@@ -36,7 +36,7 @@ class SocketOpts:
         self.connection.send(bytes((json_data), ('utf-8')))
 
     @TypeEnforcer.enforcer(recursive=True)
-    def schema_unpack(self) -> typing.Type[pydantic.BaseModel]:
+    def schema_unpack(self):
         data = self.json_receive()
-        schema_type = schema_types[data[0]]
+        schema_type = schema_types[data['schema_type']]
         return schema_type(**data)

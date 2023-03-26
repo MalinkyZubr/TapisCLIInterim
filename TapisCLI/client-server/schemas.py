@@ -12,7 +12,7 @@ class CommandData(BaseModel):
 class AuthData(BaseModel):
     schema_type: str = 'AuthData'
     username: Optional[str]
-    password: Optional[SecretStr]
+    password: Optional[str]
 
 
 class StartupData(BaseModel):

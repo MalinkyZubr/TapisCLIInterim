@@ -30,13 +30,19 @@ class RequiresForm(BaseRequirementDecorator):
         form_request = schemas.FormRequest(arguments_list=fields)
         self.json_send(form_request.dict())
         filled_form = self.schema_unpack()
+
         return self.function(**filled_form)
 
 
-class RequiresPassword(BaseRequirementDecorator):
+class Auth(BaseRequirementDecorator):
     def __call__(self, *args, **kwargs):
-        
-        return self.function(*args, **kwargs)
+        auth_request = schemas.AuthRequest()
+        self.json_send(auth_request.dict())
+        auth_data = self.schema_unpack()
+        kwargs = kwargs.update(auth_data.dict())
+
+        return self.function(**kwargs)
+    
 
 if __name__ == "__main__":
     @RequiresForm(connection='yabadabadoo')

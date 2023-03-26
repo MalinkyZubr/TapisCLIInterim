@@ -121,8 +121,9 @@ class Server(SO.SocketOpts, helpers.OperationsHelper):
         self.logger.info("Received connection request")
         if initial:  # if this is the first time in the session that the cli is connecting
             # tell the client that it is the first connection
-            startup_data = schemas.StartupData(initial = True)
+            startup_data = schemas.StartupData(initial = initial)
             self.json_send(startup_data.dict())
+            self.logger.info("Sent initial status update")
             # give the cli 3 attempts to provide authentication
             for attempt in range(1, 4):
                 credentials = self.schema_unpack()  # receive the username and password
@@ -136,7 +137,7 @@ class Server(SO.SocketOpts, helpers.OperationsHelper):
                     break
                 except Exception as e:
                     # send failure message to CLI
-                    login_failure_data = schemas.Error(error = e, info = attempt)
+                    login_failure_data = schemas.ResponseData(response_message = (e, attempt))
                     self.json_send(login_failure_data.dict())
                     self.logger.warning("Verification failure")
                     if attempt == 3:  # If there have been 3 login attempts
@@ -146,8 +147,9 @@ class Server(SO.SocketOpts, helpers.OperationsHelper):
                     continue
 
         self.logger.info("Connection success")
-        startup_result = schemas.StartupData(initial = True, username = username, url = url)
+        startup_result = schemas.StartupData(initial = initial, username = username, url = url)
         self.json_send(startup_result.dict())
+        self.logger.info("Final connection data sent")
         return username, password, t, url, access_token
 
     def __exit(self):

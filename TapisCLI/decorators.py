@@ -10,13 +10,14 @@ except:
     import exceptions
 
 import typing
+import socket
 
 
 class BaseRequirementDecorator(SocketOpts.SocketOpts, helpers.OperationsHelper):
-    connection = None
-    username = None
-    password = None
-    def __init__(self, func):
+    connection: typing.Optional[socket.socket] = None
+    username: typing.Optional[str] = None
+    password: typing.Optional[str] = None
+    def __init__(self, func: typing.Callable):
         self.function = func
         self.__code__ = func.__code__
         self.connection = BaseRequirementDecorator.connection
@@ -63,11 +64,12 @@ class Auth(BaseRequirementDecorator):
         auth_data: schemas.AuthData = self.schema_unpack()
         if 'username' in fields and 'password' in fields:
             kwargs['username'], kwargs['password'] = auth_data.username, auth_data.password
+            return self.function(**kwargs)
         username, password = auth_data.username, auth_data.password
         if username != self.username:
-            raise Exception("username incorrect")
+            raise exceptions.InvalidCredentialsReceived(self.function, 'username')
         elif password != self.password:    
-            raise Exception("password incorrect")
+            raise exceptions.InvalidCredentialsReceived(self.function, 'password')
 
         return self.function(**kwargs)
 
@@ -81,10 +83,3 @@ class NeedsConfirmation(BaseRequirementDecorator):
         if not confirmed:
             raise exceptions.NoConfirmationError(self.function)
         return self.function(**kwargs)
-
-
-
-if __name__ == "__main__":
-    @RequiresForm(connection='yabadabadoo')
-    def silly(doof):
-        pass

@@ -21,11 +21,13 @@ try:
     from . import SocketOpts as SO
     from . import helpers
     from . import schemas
+    from . import decorators
 except:
     import exceptions
     import SocketOpts as SO
     import helpers
     import schemas
+    import decorators
 
 class Server(SO.SocketOpts, helpers.OperationsHelper):
     @TypeEnforcer.enforcer(recursive=True)
@@ -72,12 +74,16 @@ class Server(SO.SocketOpts, helpers.OperationsHelper):
         self.files = None
         self.apps = None
         self.neo4j = None
+        self.t = None
+        self.url = None
+        self.access_token = None
+        self.username = None
+        self.password = None
 
-        self.username, self.password, self.t, self.url, self.access_token = self.accept(
-            initial=True)  # connection returns the tapis object and user info
+        self.accept(initial=True)  # connection returns the tapis object and user info
 
         # instantiate the subsystems
-        self.logger.info('initialization complee')
+        self.logger.info('initialization complete')
         self.command_group_map = {
             'pods':self.pods.cli,
             'systems':self.systems.cli,
@@ -88,14 +94,16 @@ class Server(SO.SocketOpts, helpers.OperationsHelper):
             'help':self.help,
             'whoami':self.pods.whoami,
             'exit':self.__exit,
-            'shutdown':self.__shutdown
+            'shutdown':self.__shutdown,
+            'switch_service':self.tapis_init
         }
 
-    @TypeEnforcer.enforcer(recursive=True)
-    def tapis_init(self, username: str, password: str) -> tuple[typing.Any, str, str] | None:  # initialize the tapis opject
+    @decorators.Auth
+    def tapis_init(self, username: str, password: str, name: str) -> tuple[typing.Any, str, str] | None:  # name is the baseURL
         start = time.time()
-        base_url = "https://icicle.tapis.io"
-        t = Tapis(base_url=base_url,
+        self.username = username
+        self.password = password
+        t = Tapis(base_url=name,
                   username=username,
                   password=password)
         t.get_tokens()
@@ -105,7 +113,7 @@ class Server(SO.SocketOpts, helpers.OperationsHelper):
                       "Content-Type": "application/json"}
 
         # Service URL
-        url = f"{base_url}/v3"
+        url = f"{name}/v3"
 
         # create authenticator for tapis systems
         authenticator = t.access_token
@@ -114,12 +122,26 @@ class Server(SO.SocketOpts, helpers.OperationsHelper):
             r'(?<=access_token: )(.*)', str(authenticator))[0]
 
         print(type(t))
-        return t, url, access_token
+
+        self.pods = Pods(t, username, password, self.connection)
+        self.systems = Systems(t, username, password, self.connection)
+        self.files = Files(t, username, password, self.connection)
+        self.apps = Apps(t, username, password, self.connection)
+        self.neo4j = Neo4jCLI(t, username, password, self.connection)
+
+        self.t = t
+        self.url = url
+        self.access_token = access_token
+
+        self.logger.info(f"initiated in {start-time.time()}")
+
+        return f"Successfully initialized tapis service on {self.url}"
 
     @TypeEnforcer.enforcer(recursive=True)
     def accept(self, initial: bool=False):  # function to accept CLI connection to the server
         self.connection, ip_port = self.sock.accept()  # connection request is accepted
         self.logger.info("Received connection request")
+
         startup_data = schemas.StartupData(initial = initial)
         self.json_send(startup_data.dict())
         if initial:  # if this is the first time in the session that the cli is connecting
@@ -127,22 +149,15 @@ class Server(SO.SocketOpts, helpers.OperationsHelper):
             self.logger.info("Sent initial status update")
             # give the cli 3 attempts to provide authentication
             for attempt in range(1, 4):
-                credentials = self.schema_unpack()  # receive the username and password
+                  # receive the username and password
                 self.logger.info("Received credentials")
-                username, password = credentials.username, credentials.password
+                url: schemas.StartupData = self.schema_unpack().url
                 try:
                     # try intializing tapis with the supplied credentials
-                    t, url, access_token = self.tapis_init(username, password)
-
-                    self.pods = Pods(t, username, password, self.connection)
-                    self.systems = Systems(t, username, password, self.connection)
-                    self.files = Files(t, username, password, self.connection)
-                    self.apps = Apps(t, username, password, self.connection)
-                    self.neo4j = Neo4jCLI(t, username, password, self.connection)
-
+                    self.tapis_init(url=url)
                     # send to confirm to the CLI that authentication succeeded
                     self.logger.info("Verification success")
-                    startup_result = schemas.StartupData(initial = initial, username = username, url = url)
+                    startup_result = schemas.StartupData(initial = initial, username = self.username, url = url)
                     break
                 except Exception as e:
                     # send failure message to CLI
@@ -159,8 +174,6 @@ class Server(SO.SocketOpts, helpers.OperationsHelper):
         self.logger.info("Connection success")
         self.json_send(startup_result.dict())
         self.logger.info("Final connection data sent")
-        if initial:
-            return username, password, t, url, access_token
 
     def __exit(self):
         raise exceptions.Exit
@@ -203,7 +216,7 @@ class Server(SO.SocketOpts, helpers.OperationsHelper):
                 self.json_send(response.dict()) 
                 if exit_status == 1:
                     self.__exit()
-            except exceptions.CommandNotFoundError as e:
+            except (exceptions.CommandNotFoundError, exceptions.NoConfirmationError, exceptions.InvalidCredentialsReceived) as e:
                 error_response = schemas.ResponseData(response_message = str(e))
                 self.json_send(error_response.dict())
             except (exceptions.TimeoutError, exceptions.Shutdown) as e:

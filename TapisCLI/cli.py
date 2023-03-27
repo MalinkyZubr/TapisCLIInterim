@@ -102,6 +102,10 @@ class CLI(SO.SocketOpts):
                 password = getpass("Password: ") # take the password
                 auth_data = schemas.AuthData(username = username, password = password)
                 self.json_send(auth_data.dict()) # send the username and password to the server to be used
+
+                url = str(input("\nEnter the link for the tapis service you are connecting to: "))
+                url_data = schemas.StartupData(url=url)
+                self.json_send(url_data.dict())
                 verification = self.schema_unpack() # server responds saying if the verification succeeded or not
                 if verification.schema_type == 'StartupData': # verification success, program moves forward
                     print("[+] verification success")
@@ -142,7 +146,7 @@ class CLI(SO.SocketOpts):
         return filled_form
 
     @TypeEnforcer.enforcer(recursive=True)
-    def command_operator(self, kwargs, exit_: int=0): # parses command input
+    def command_operator(self, kwargs: dict, exit_: int=0): # parses command input
         if isinstance(kwargs, list): # check if the command input is from the CLI, or direct input
             kwargs = vars(self.parser.parse_args(kwargs)) # parse the arguments
         if not kwargs['command_group']:
@@ -163,6 +167,20 @@ class CLI(SO.SocketOpts):
                 username = input("Username: ")
                 password = getpass("Password: ")
                 filled_form = schemas.AuthData(username=username, password=password)
+            elif response.schema_type == "ConfirmationRequest":
+                print(response.message)
+                while True:
+                    decision = str(input("(y/n)"))
+                    if decision == 'y':
+                        decision = True
+                        break
+                    elif decision == 'n':
+                        decision = False
+                        break
+                    else:
+                        print("Enter valid response")
+                confirmation = schemas.ResponseData(response_message=decision)
+                self.json_send(confirmation.dict())
             else:
                 return response
             self.json_send(filled_form.dict())

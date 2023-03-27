@@ -40,3 +40,14 @@ class Exit(Exception):
 
     def __str__(self):
         return "exit initiated"
+    
+
+class NoConfirmationError(Exception):
+    """
+    raise error when no confirmation is given for a function that needs confirmation to continue
+    """
+    def __init__(self, function):
+        super().__init__(f"Confirmation was not given to the function {function.__name__}")
+
+    def __str__(self):
+        return "exit initiated"

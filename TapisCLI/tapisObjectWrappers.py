@@ -110,7 +110,7 @@ class Neo4jCLI(tapisObject):
         super().__init__(tapis_object, uname, pword, connection)
         self.t = tapis_object
    
-    
+    @decorators.RequiresExpression
     def submit_query(self, file: str, id: str, expression: str) -> str: # function to submit queries to a Neo4j knowledge graph
         uname, pword = self.t.pods.get_pod_credentials(pod_id=id).user_username, self.t.pods.get_pod_credentials(pod_id=id).user_password
         graph = Graph(f"bolt+ssc://{id}.pods.icicle.tapis.io:443", auth=(uname, pword), secure=True, verify=True)
@@ -162,25 +162,37 @@ class Pods(tapisObject):
             pods_string += str(pod)
         return pods_string
     
-    def whoami(self, verbose: bool) -> str: # returns user information
+    def whoami(self, verbose: bool) -> str:
+        """
+        returns the username of the current user
+        """
         user_info = self.t.authenticator.get_userinfo()
         if verbose:
             return str(user_info)
         return user_info.username
 
-    def create_pod(self, description: str, id: str, template: str, verbose: bool) -> str: # creates a pod with a pod id, template, and description
+    def create_pod(self, description: str, id: str, template: str, verbose: bool) -> str:
+        """
+        create a new pod on the selected Tapis service
+        """
         pod_information = self.t.pods.create_pod(pod_id=id, pod_template=template, description=description)
         if verbose:
             return str(pod_information)
         return self.return_formatter(pod_information)
 
-    def restart_pod(self, id: str, verbose: bool) -> str: # restarts a pod if needed
+    def restart_pod(self, id: str, verbose: bool) -> str:
+        """
+        initiate a pod restart
+        """
         return_information = self.t.pods.restart_pod(pod_id=id)
         if verbose:
             return str(return_information)
         return self.return_formatter(return_information)
 
-    def delete_pod(self, id: str, verbose: bool) -> str: # deletes a pod
+    def delete_pod(self, id: str, verbose: bool) -> str: 
+        """
+        
+        """
         return_information = self.t.pods.delete_pod(pod_id=id)
         if verbose:
             return str(return_information)

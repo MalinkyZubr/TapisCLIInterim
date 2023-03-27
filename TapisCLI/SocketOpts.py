@@ -16,6 +16,8 @@ schema_types: dict = {
         'ResponseData':schemas.ResponseData,
         'FormRequest':schemas.FormRequest,
         'FormResponse':schemas.FormResponse,
+        'AuthRequest':schemas.AuthRequest,
+        'ConfirmationRequest':schemas.ConfirmationRequest
     }
 
 

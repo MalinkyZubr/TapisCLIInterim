@@ -18,8 +18,6 @@ class OperationsHelper:
         variables = list(get_parameters(func))
         variables.remove('self')
         for arg in variables:
-            print(arg)
-            print(kwargs[arg])
             filtered.update({arg:kwargs[arg]})
         return filtered
 

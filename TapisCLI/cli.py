@@ -26,7 +26,7 @@ except:
     import decorators
 
 
-class CLI(SO.SocketOpts, helpers.OperationsHelper):
+class CLI(SO.SocketOpts, helpers.OperationsHelper, decorators.DecoratorSetup):
     @TypeEnforcer.enforcer(recursive=True)
     def __init__(self, IP: str, PORT: int):
         self.ip, self.port = IP, PORT

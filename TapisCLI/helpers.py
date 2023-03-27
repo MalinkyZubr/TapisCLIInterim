@@ -2,17 +2,12 @@ import typing
 import sys
 import threading
 from TypeEnforcement.type_enforcer import TypeEnforcer
-try:
-    from . import decorators
-except:
-    import decorators
 
 
 def get_parameters(func):
     return func.__code__.co_varnames[:func.__code__.co_argcount]
 
 class OperationsHelper:
-    decorators_list = [decorators.RequiresForm, decorators.Auth, decorators.NeedsConfirmation, decorators.RequiresExpression]
     def filter_kwargs(self, func: typing.Callable, kwargs: dict) -> dict:
         filtered = dict()
         variables = list(get_parameters(func))
@@ -20,12 +15,6 @@ class OperationsHelper:
         for arg in variables:
             filtered.update({arg:kwargs[arg]})
         return filtered
-
-    def configure_decorators(self):
-        for decorator in OperationsHelper.decorators_list:
-            decorator.connection = self.connection
-            decorator.username = self.username
-            decorator.password = self.password
 
 
 class KillableThread(threading.Thread):

@@ -29,7 +29,7 @@ except:
     import schemas
     import decorators
 
-class Server(SO.SocketOpts, helpers.OperationsHelper):
+class Server(SO.SocketOpts, helpers.OperationsHelper, decorators.DecoratorSetup):
     @TypeEnforcer.enforcer(recursive=True)
     def __init__(self, IP: str, PORT: int):
         # logger setup

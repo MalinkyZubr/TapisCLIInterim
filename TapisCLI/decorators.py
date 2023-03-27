@@ -85,6 +85,15 @@ class NeedsConfirmation(BaseRequirementDecorator):
         return self.function(**kwargs)
     
 
+class DecoratorSetup:
+    decorators_list = [RequiresForm, Auth, NeedsConfirmation, RequiresExpression]
+    def configure_decorators(self):
+        for decorator in DecoratorSetup.decorators_list:
+            decorator.connection = self.connection
+            decorator.username = self.username
+            decorator.password = self.password
+    
+
 class AnimatedLoading:
     def __init__(self, func: typing.Callable):
         self.function = func

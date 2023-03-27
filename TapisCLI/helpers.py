@@ -29,10 +29,6 @@ class OperationsHelper:
             decorator.username = self.username
             decorator.password = self.password
 
-    def loading_animation(self, frame: int):
-        sys.stdout.write(f'\rloading ' + animation[frame])
-        sys.stdout.flush()
-
 
 class KillableThread(threading.Thread):
     def __init__(self, *args, **keywords):

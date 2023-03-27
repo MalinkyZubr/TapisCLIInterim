@@ -28,7 +28,13 @@
 # silly.setup()
 # print(silly)
 
-def silly():
-    pass
+import time
+import sys
 
-print(silly.__name__)
+
+animation = ['|','/','-','\\']
+while True:
+    for frame in animation:
+        sys.stdout.write('\rloading ' + frame)
+        sys.stdout.flush()
+        time.sleep(0.1)

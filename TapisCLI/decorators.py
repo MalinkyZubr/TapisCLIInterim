@@ -1,3 +1,6 @@
+import typing
+import socket
+import sys
 try:
     from . import helpers
     from . import schemas
@@ -8,9 +11,6 @@ except:
     import schemas
     import SocketOpts
     import exceptions
-
-import typing
-import socket
 
 
 class BaseRequirementDecorator(SocketOpts.SocketOpts, helpers.OperationsHelper):
@@ -83,3 +83,31 @@ class NeedsConfirmation(BaseRequirementDecorator):
         if not confirmed:
             raise exceptions.NoConfirmationError(self.function)
         return self.function(**kwargs)
+    
+
+class AnimatedLoading:
+    def __init__(self, func: typing.Callable):
+        self.function = func
+        self.__code__ = func.__code__
+        self.animation = ['|','/','-','\\']
+
+    def __repr__(self):
+        return self.function
+    
+    def __str__(self):
+        return str(self.function)
+    
+    def animation(self):
+        while True:
+            for frame in self.animation:
+                sys.stdout.write(f'\rloading ' + frame)
+                sys.stdout.flush()
+    
+    def __call__(self, *args, **kwargs):
+        animation_thread = helpers.KillableThread(target=self.animation)
+        animation_thread.start()
+        result = self.func(*args, **kwargs)
+        animation_thread.kill()
+        return result
+
+

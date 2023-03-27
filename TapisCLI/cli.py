@@ -17,11 +17,16 @@ import typing
 try:
     from . import schemas
     from . import SocketOpts as SO
+    from . import helpers
+    from . import decorators
 except:
     import schemas
     import SocketOpts as SO
+    import helpers
+    import decorators
 
-class CLI(SO.SocketOpts):
+
+class CLI(SO.SocketOpts, helpers.OperationsHelper):
     @TypeEnforcer.enforcer(recursive=True)
     def __init__(self, IP: str, PORT: int):
         self.ip, self.port = IP, PORT
@@ -56,15 +61,13 @@ class CLI(SO.SocketOpts):
         else: # unix based
             os.system(r"python .\server.py &")
 
+    @decorators.AnimatedLoading
     def connection_initialization(self): # patience. This sometimes takes a while
         """
         start the local server through the client
         """
         startup_flag = False # flag to tell code not to run multiple server setup threads at once
-        dot_count = 1 # for pretty initialization visual
         timeout_time = time.time() + 30 # server setup timeout. If expires, there is a problem!
-        print("[+] Now connecting. This might take a while...\n")
-        animation = ['.  ','.. ', '...']
         while True:
             if time.time() > timeout_time: # connection timeout condition
                 sys.stdout.write("\r[-] Connection timeout")
@@ -77,14 +80,6 @@ class CLI(SO.SocketOpts):
                     startup = threading.Thread(target=self.initialize_server) # run the server setup on a separate thread
                     startup.start() 
                     startup_flag = True # set the flag to true so the thread runs only once
-                    continue
-                else: # prints out dots, purely visual
-                    sys.stdout.write(f'\r[+] Starting Server{animation[dot_count]}')
-                    sys.stdout.flush()
-                    if dot_count == 2:
-                        dot_count = 0
-                    else:
-                        dot_count += 1
                     continue
 
     def connect(self):

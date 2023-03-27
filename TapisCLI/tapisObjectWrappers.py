@@ -21,13 +21,13 @@ class tapisObject(helpers.OperationsHelper):
         self.t = tapis_instance
         self.username = username
         self.password = password
+        self.connection = connection
 
         help_path = r"help.json"
         self.help_path = help_path
         self.command_map = command_map
 
-        decorators.RequiresForm.connection = connection
-        decorators.Auth.connection = connection
+        self.configure_decorators()
 
         with open(self.help_path, 'r') as h:
             json_help = h.read()
@@ -91,12 +91,14 @@ class Systems(tapisObject):
 
         return str(cred_return_value)
 
+    @decorators.Auth
     def system_password_set(self, id: str, password: str) -> str: # set the password for a system
         password_return_value = self.t.systems.createUserCredential(systemId=id, # will put this in a getpass later
                             userName=self.username,
                             password=password)
         return str(password_return_value)
 
+    @decorators.NeedsConfirmation
     def delete_system(self, id: str) -> str:
         return_value = self.t.systems.deleteSystem(systemId=id)
         return return_value
@@ -180,6 +182,7 @@ class Pods(tapisObject):
             return str(pod_information)
         return self.return_formatter(pod_information)
 
+    @decorators.NeedsConfirmation
     def restart_pod(self, id: str, verbose: bool) -> str:
         """
         initiate a pod restart
@@ -189,9 +192,10 @@ class Pods(tapisObject):
             return str(return_information)
         return self.return_formatter(return_information)
 
+    @decorators.NeedsConfirmation
     def delete_pod(self, id: str, verbose: bool) -> str: 
         """
-        
+        delete select pod
         """
         return_information = self.t.pods.delete_pod(pod_id=id)
         if verbose:
@@ -202,6 +206,7 @@ class Pods(tapisObject):
         return_information = self.t.pods.set_pod_permission(pod_id=id, user=username, level=level)
         return str(return_information)
     
+    @decorators.NeedsConfirmation
     def delete_pod_perms(self, id: str, username: str) -> str: # take away someones perms if they are being malicious, or something
         return_information = self.t.pods.delete_pod_perms(pod_id=id, user=username)
         return str(return_information)
@@ -287,6 +292,7 @@ class Apps(tapisObject):
         apps = self.t.apps.getApps()
         return str(apps)
 
+    @decorators.NeedsConfirmation
     def delete_app(self, id: str, version: str) -> str:
         return_value = self.t.apps.deleteApp(appId=id, appVersion=version)
         return str(return_value)

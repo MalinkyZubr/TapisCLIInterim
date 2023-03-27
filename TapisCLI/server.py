@@ -66,17 +66,18 @@ class Server(SO.SocketOpts, helpers.OperationsHelper):
         self.end_time = time.time() + 300  # start the countdown on the timeout
 
         self.logger.info("Awaiting connection")
+
+        self.pods = None
+        self.systems = None
+        self.files = None
+        self.apps = None
+        self.neo4j = None
+
         self.username, self.password, self.t, self.url, self.access_token = self.accept(
             initial=True)  # connection returns the tapis object and user info
 
         # instantiate the subsystems
-        self.pods = Pods(self.t, self.username, self.password)
-        self.systems = Systems(self.t, self.username, self.password)
-        self.files = Files(self.t, self.username, self.password)
-        self.apps = Apps(self.t, self.username, self.password)
-        self.neo4j = Neo4jCLI(self.t, self.username, self.password)
         self.logger.info('initialization complee')
-
         self.command_group_map = {
             'pods':self.pods.cli,
             'systems':self.systems.cli,
@@ -132,6 +133,13 @@ class Server(SO.SocketOpts, helpers.OperationsHelper):
                 try:
                     # try intializing tapis with the supplied credentials
                     t, url, access_token = self.tapis_init(username, password)
+
+                    self.pods = Pods(t, username, password, self.connection)
+                    self.systems = Systems(t, username, password, self.connection)
+                    self.files = Files(t, username, password, self.connection)
+                    self.apps = Apps(t, username, password, self.connection)
+                    self.neo4j = Neo4jCLI(t, username, password, self.connection)
+
                     # send to confirm to the CLI that authentication succeeded
                     self.logger.info("Verification success")
                     startup_result = schemas.StartupData(initial = initial, username = username, url = url)

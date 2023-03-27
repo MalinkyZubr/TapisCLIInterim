@@ -10,12 +10,14 @@ import typing
 from TypeEnforcement.type_enforcer import TypeEnforcer
 try:
     from . import helpers
+    from . import decorators
 except:
-    import helpers
+    import helpers 
+    import decorators
 
 
 class tapisObject(helpers.OperationsHelper):
-    def __init__(self, tapis_instance, username, password, command_map=None):
+    def __init__(self, tapis_instance, username, password, connection, command_map=None):
         self.t = tapis_instance
         self.username = username
         self.password = password
@@ -23,6 +25,9 @@ class tapisObject(helpers.OperationsHelper):
         help_path = r"help.json"
         self.help_path = help_path
         self.command_map = command_map
+
+        decorators.RequiresForm.connection = connection
+        decorators.Auth.connection = connection
 
         with open(self.help_path, 'r') as h:
             json_help = h.read()
@@ -35,7 +40,7 @@ class tapisObject(helpers.OperationsHelper):
 
 
 class Systems(tapisObject):
-    def __init__(self, tapis_instance, username, password):
+    def __init__(self, tapis_instance, username, password, connection):
         command_map = {
             'get_systems':self.get_systems,
             'get_system_info':self.get_system_info,
@@ -45,7 +50,7 @@ class Systems(tapisObject):
             'delete_system':self.delete_system,
             'help':self.__help
         }
-        super().__init__(tapis_instance, username, password, command_map=command_map)
+        super().__init__(tapis_instance, username, password, connection, command_map=command_map)
 
     def return_formatter(self, info):
         return f"id: {info.id}\nhost: {info.host}\n\n"
@@ -101,11 +106,12 @@ class Systems(tapisObject):
 
 
 class Neo4jCLI(tapisObject):
-    def __init__(self, tapis_object, uname, pword):
-        super().__init__(tapis_object, uname, pword)
+    def __init__(self, tapis_object, uname, pword, connection):
+        super().__init__(tapis_object, uname, pword, connection)
         self.t = tapis_object
    
-    def submit_query(self, file: str, id: str) -> str: # function to submit queries to a Neo4j knowledge graph
+    
+    def submit_query(self, file: str, id: str, expression: str) -> str: # function to submit queries to a Neo4j knowledge graph
         uname, pword = self.t.pods.get_pod_credentials(pod_id=id).user_username, self.t.pods.get_pod_credentials(pod_id=id).user_password
         graph = Graph(f"bolt+ssc://{id}.pods.icicle.tapis.io:443", auth=(uname, pword), secure=True, verify=True)
         if file:
@@ -126,7 +132,7 @@ class Neo4jCLI(tapisObject):
 
 
 class Pods(tapisObject):
-    def __init__(self, tapis_instance, username, password):
+    def __init__(self, tapis_instance, username, password, connection):
         command_map = {
                 'get_pods':self.get_pods,
                 'create_pod':self.create_pod,
@@ -138,7 +144,7 @@ class Pods(tapisObject):
                 'copy_pod_password':self.copy_pod_password,
                 'help':self.__help
             }
-        super().__init__(tapis_instance, username, password, command_map=command_map)
+        super().__init__(tapis_instance, username, password, connection, command_map=command_map)
 
     def return_formatter(self, info):
         return f"Pod ID: {info.pod_id}\nPod Template: {info.pod_template}\nStatus: {info.status_requested}\n\n"
@@ -203,14 +209,14 @@ class Pods(tapisObject):
 
 
 class Files(tapisObject):
-    def __init__(self, tapis_instance, username, password):
+    def __init__(self, tapis_instance, username, password, connection):
         command_map = {
             'list_files':self.list_files,
             'upload':self.upload,
             'download':self.download,
             'help':self.__help
         }
-        super().__init__(tapis_instance, username, password, command_map=command_map)
+        super().__init__(tapis_instance, username, password, connection, command_map=command_map)
 
     def return_formatter(self, info):
         return f"name: {info.name}\ngroup: {info.group}\npath: {info.path}\n"
@@ -246,7 +252,7 @@ class Files(tapisObject):
 
 
 class Apps(tapisObject):
-    def __init__(self, tapis_instance, username, password):
+    def __init__(self, tapis_instance, username, password, connection):
         command_map = {
             'create_app':self.create_app,
             'get_apps':self.get_apps,
@@ -257,7 +263,7 @@ class Apps(tapisObject):
             'download_app_results':self.download_job_output,
             'help':self.__help,
         }
-        super().__init__(tapis_instance, username, password, command_map=command_map)
+        super().__init__(tapis_instance, username, password, connection, command_map=command_map)
 
     def create_app(self, file: str) -> str: # create a tapis app taking a json descriptor file path
         with open(file, 'r') as f:

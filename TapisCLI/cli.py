@@ -91,8 +91,8 @@ class CLI(SO.SocketOpts, helpers.OperationsHelper, decorators.DecoratorSetup):
         """
         connect to the local server
         """
-        self.connection_initialization() # connect to the server
-        #self.connection.connect((self.ip, self.port)) # enable me for debugging. Requires manual server start
+        #self.connection_initialization() # connect to the server
+        self.connection.connect((self.ip, self.port)) # enable me for debugging. Requires manual server start
         print('waiting for initial')
         connection_info: schemas.StartupData = self.schema_unpack() # receive info from the server whether it is a first time connection
         print('received initial')

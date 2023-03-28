@@ -89,30 +89,30 @@ class CLI(SO.SocketOpts, helpers.OperationsHelper, decorators.DecoratorSetup):
         #self.connection_initialization() # connect to the server
         self.connection.connect((self.ip, self.port)) # enable me for debugging. Requires manual server start
         print('waiting for initial')
-        connection_info = self.schema_unpack() # receive info from the server whether it is a first time connection
+        connection_info: schemas.StartupData = self.schema_unpack() # receive info from the server whether it is a first time connection
         print('received initial')
         if connection_info.initial: # if the server is receiving its first connection for the session\
             while True:
+                url = str(input("\nEnter the link for the tapis service you are connecting to: "))
+                url_data = schemas.StartupData(url=url)
+                self.json_send(url_data.dict())
+                auth_request: schemas.AuthRequest = self.schema_unpack()
                 username = str(input("\nUsername: ")) # take the username
                 password = getpass("Password: ") # take the password
                 auth_data = schemas.AuthData(username = username, password = password)
                 self.json_send(auth_data.dict()) # send the username and password to the server to be used
 
-                url = str(input("\nEnter the link for the tapis service you are connecting to: "))
-                url_data = schemas.StartupData(url=url)
-                self.json_send(url_data.dict())
-                verification = self.schema_unpack() # server responds saying if the verification succeeded or not
+                verification: schemas.ResponseData | schemas.StartupData = self.schema_unpack() # server responds saying if the verification succeeded or not
                 if verification.schema_type == 'StartupData': # verification success, program moves forward
                     print("[+] verification success")
                     return verification.username, verification.url
                 else: # verification failed. User has 3 tries, afterwards the program will shut down
-                    print("[-] verification failure")
-                    if verification[1] == 3:
+                    print(f"[-] verification failure, attempt # {verification.response_message[1]}")
+                    if verification.response_message[1] == 3:
                         sys.exit(0)
                     continue
 
-        start_data = self.schema_unpack()
-        return start_data.username, start_data.url # return the username and url
+        return connection_info.username, connection_info.url # return the username and url
 
     @TypeEnforcer.enforcer(recursive=True)
     def process_command(self, command: str) -> list[str]: 
@@ -141,7 +141,7 @@ class CLI(SO.SocketOpts, helpers.OperationsHelper, decorators.DecoratorSetup):
         return filled_form
 
     @TypeEnforcer.enforcer(recursive=True)
-    def command_operator(self, kwargs: dict, exit_: int=0): # parses command input
+    def command_operator(self, kwargs: dict | list, exit_: int=0): # parses command input
         if isinstance(kwargs, list): # check if the command input is from the CLI, or direct input
             kwargs = vars(self.parser.parse_args(kwargs)) # parse the arguments
         if not kwargs['command_group']:

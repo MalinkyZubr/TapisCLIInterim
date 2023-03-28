@@ -28,13 +28,21 @@
 # silly.setup()
 # print(silly)
 
-import time
-import sys
+# import time
+# import sys
 
 
-animation = ['|','/','-','\\']
-while True:
-    for frame in animation:
-        sys.stdout.write('\rloading ' + frame)
-        sys.stdout.flush()
-        time.sleep(0.1)
+# animation = ['|','/','-','\\']
+# while True:
+#     for frame in animation:
+#         sys.stdout.write('\rloading ' + frame)
+#         sys.stdout.flush()
+#         time.sleep(0.1)
+
+
+x = {1:0, 3:4}
+if 1 in x and 3 in x:
+    if x[1] and x[3]:
+        print(True)
+    else:
+        print(False)

@@ -16,7 +16,7 @@ except:
     import decorators
 
 
-class tapisObject(helpers.OperationsHelper):
+class tapisObject(helpers.OperationsHelper, decorators.DecoratorSetup):
     def __init__(self, tapis_instance, username, password, connection, command_map=None):
         self.t = tapis_instance
         self.username = username

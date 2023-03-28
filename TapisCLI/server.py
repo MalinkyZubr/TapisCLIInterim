@@ -150,29 +150,29 @@ class Server(SO.SocketOpts, helpers.OperationsHelper, decorators.DecoratorSetup)
             for attempt in range(1, 4):
                   # receive the username and password
                 url: schemas.StartupData = self.schema_unpack().url
-                #try:
+                try:
                     # try intializing tapis with the supplied credentials
-                auth_request = schemas.AuthRequest()
-                self.json_send(auth_request.dict())
-                auth_data: schemas.AuthData = self.schema_unpack()
-                username, password = auth_data.username, auth_data.password
+                    auth_request = schemas.AuthRequest()
+                    self.json_send(auth_request.dict())
+                    auth_data: schemas.AuthData = self.schema_unpack()
+                    username, password = auth_data.username, auth_data.password
 
-                self.configure_decorators()
-                self.tapis_init(name=url, username=username, password=password)
-                # send to confirm to the CLI that authentication succeeded
-                self.logger.info("Verification success")
-                break
-                # except Exception as e:
-                #     print(e)
-                #     # send failure message to CLI
-                #     login_failure_data = schemas.ResponseData(response_message = (str(e), attempt))
-                #     self.json_send(login_failure_data.dict())
-                #     self.logger.warning("Verification failure")
-                #     if attempt == 3:  # If there have been 3 login attempts
-                #         self.logger.error(
-                #             "Attempted verification too many times. Exiting")
-                #         os._exit(0)  # shutdown the server
-                #     continue
+                    self.configure_decorators()
+                    self.tapis_init(name=url, username=username, password=password)
+                    # send to confirm to the CLI that authentication succeeded
+                    self.logger.info("Verification success")
+                    break
+                except Exception as e:
+                    print(e)
+                    # send failure message to CLI
+                    login_failure_data = schemas.ResponseData(response_message = (str(e), attempt))
+                    self.json_send(login_failure_data.dict())
+                    self.logger.warning("Verification failure")
+                    if attempt == 3:  # If there have been 3 login attempts
+                        self.logger.error(
+                            "Attempted verification too many times. Exiting")
+                        os._exit(0)  # shutdown the server
+                    continue
         startup_result = schemas.StartupData(initial = initial, username = self.username, url = self.url)
         self.logger.info("Connection success")
         self.json_send(startup_result.dict())

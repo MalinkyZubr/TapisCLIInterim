@@ -56,18 +56,22 @@ class CLI(SO.SocketOpts, helpers.OperationsHelper, decorators.DecoratorSetup):
         """
         detect client operating system. The local server intitialization is different between unix and windows based systems
         """
+        print("SERVER STARTUP INITIATED")
         if 'win' in sys.platform: # windows
+            print("starting for windows")
             os.system(r"pythonw .\server.py")
         else: # unix based
+            print("starting for linux")
             os.system(r"python .\server.py &")
 
-    @decorators.AnimatedLoading
+    #@decorators.AnimatedLoading
     def connection_initialization(self): # patience. This sometimes takes a while
         """
         start the local server through the client
         """
         startup_flag = False # flag to tell code not to run multiple server setup threads at once
         timeout_time = time.time() + 30 # server setup timeout. If expires, there is a problem!
+        print("starting server")
         while True:
             if time.time() > timeout_time: # connection timeout condition
                 sys.stdout.write("\r[-] Connection timeout")
@@ -76,6 +80,7 @@ class CLI(SO.SocketOpts, helpers.OperationsHelper, decorators.DecoratorSetup):
                 self.connection.connect((self.ip, self.port)) # try to establish a connection
                 break
             except Exception as e:
+                print(e)
                 if not startup_flag:
                     startup = threading.Thread(target=self.initialize_server) # run the server setup on a separate thread
                     startup.start() 
@@ -86,8 +91,8 @@ class CLI(SO.SocketOpts, helpers.OperationsHelper, decorators.DecoratorSetup):
         """
         connect to the local server
         """
-        #self.connection_initialization() # connect to the server
-        self.connection.connect((self.ip, self.port)) # enable me for debugging. Requires manual server start
+        self.connection_initialization() # connect to the server
+        #self.connection.connect((self.ip, self.port)) # enable me for debugging. Requires manual server start
         print('waiting for initial')
         connection_info: schemas.StartupData = self.schema_unpack() # receive info from the server whether it is a first time connection
         print('received initial')

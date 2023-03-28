@@ -106,9 +106,14 @@ class DecoratorSetup:
 
 class AnimatedLoading:
     def __init__(self, func: typing.Callable):
+        update_wrapper(self, func)
         self.function = func
         self.__code__ = func.__code__
-        self.animation = ['|','/','-','\\']
+        self.animation_frames = ['|','/','-','\\']
+
+    def __get__(self, obj, objtype):
+        """Support instance methods."""
+        return partial(self.__call__, obj)
 
     def __repr__(self):
         return self.function
@@ -118,14 +123,14 @@ class AnimatedLoading:
     
     def animation(self):
         while True:
-            for frame in self.animation:
+            for frame in self.animation_frames:
                 sys.stdout.write(f'\rloading ' + frame)
                 sys.stdout.flush()
     
-    def __call__(self, *args, **kwargs):
+    def __call__(self, obj, *args, **kwargs):
         animation_thread = helpers.KillableThread(target=self.animation)
         animation_thread.start()
-        result = self.func(*args, **kwargs)
+        result = self.function(obj, *args, **kwargs)
         animation_thread.kill()
         return result
 

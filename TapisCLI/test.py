@@ -40,9 +40,30 @@
 #         time.sleep(0.1)
 
 
-x = {1:0, 3:4}
-if 1 in x and 3 in x:
-    if x[1] and x[3]:
-        print(True)
-    else:
-        print(False)
+# x = {1:0, 3:4}
+# if 1 in x and 3 in x:
+#     if x[1] and x[3]:
+#         print(True)
+#     else:
+#         print(False)
+
+from helpers import KillableThread
+import time
+import sys
+
+
+class Silly:
+    def hellothree(self):
+        while True:
+            print("hello")
+            time.sleep(0.5)
+
+
+silly = Silly()
+hellothread = KillableThread(target=silly.hellothree)
+hellothread.start()
+time.sleep(3)
+print("shutting down")
+#sys.exit()
+hellothread.kill()
+

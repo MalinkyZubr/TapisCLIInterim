@@ -15,6 +15,12 @@ class OperationsHelper:
         for arg in variables:
             filtered.update({arg:kwargs[arg]})
         return filtered
+    
+
+class DynamicHelpUtility:
+    """
+    dynamically generate the help menu based on the docstring and function arguments using .__doc__ and .__code__
+    """
 
 
 class KillableThread(threading.Thread):

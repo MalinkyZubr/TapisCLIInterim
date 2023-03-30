@@ -66,17 +66,25 @@ import sys
 # print("shutting down")
 # #sys.exit()
 # hellothread.kill()
-import os
-def initialize_server(): 
-        """
-        detect client operating system. The local server intitialization is different between unix and windows based systems
-        """
-        print("SERVER STARTUP INITIATED")
-        if 'win' in sys.platform:
-            os.system(r"pythonw .\server.py")
-            print("DONE")
-        else: # unix based
-            os.system(r"python .\server.py &")
-            print("DONE")
+# import os
+# def initialize_server(): 
+#         """
+#         detect client operating system. The local server intitialization is different between unix and windows based systems
+#         """
+#         print("SERVER STARTUP INITIATED")
+#         if 'win' in sys.platform:
+#             os.system(r"pythonw .\server.py")
+#             print("DONE")
+#         else: # unix based
+#             os.system(r"python .\server.py &")
+#             print("DONE")
 
-initialize_server()
+# initialize_server()
+
+def asddlf():
+    """
+    this function does silly things
+    """
+    pass
+
+print(asddlf.__doc__)

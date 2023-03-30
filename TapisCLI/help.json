@@ -1,5 +1,8 @@
 {
     "whoami":"get user information: whoami",
+    "exit":"exit the CLI without deactivating he servo",
+    "shutdown":"exit the cli and shutdown the server",
+    "switch_service":"change the Tapis service you are connected to", 
     "apps":
     {
     "create_app": "create an app to run via tapis\nFormat: jobs -c create_app -F <path to app json config file>",

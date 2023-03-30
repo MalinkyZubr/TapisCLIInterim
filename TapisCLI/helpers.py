@@ -20,6 +20,7 @@ class OperationsHelper:
 class DynamicHelpUtility:
     """
     dynamically generate the help menu based on the docstring and function arguments using .__doc__ and .__code__
+    to generate helps for each command, iterate over the command map of the selected tapis wrapper object, and generate separate help menu for each
     """
 
 

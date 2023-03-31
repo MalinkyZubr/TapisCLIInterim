@@ -87,7 +87,7 @@ class CLI(SO.SocketOpts, helpers.OperationsHelper, decorators.DecoratorSetup):
         if connection_info.initial: # if the server is receiving its first connection for the session\
             while True:
                 try:
-                    url = "https://icicle.tapis.io"#str(input("\nEnter the link for the tapis service you are connecting to: "))
+                    url = str(input("\nEnter the link for the tapis service you are connecting to: "))
                 except KeyboardInterrupt:
                     url = " "
                     pass
@@ -95,8 +95,8 @@ class CLI(SO.SocketOpts, helpers.OperationsHelper, decorators.DecoratorSetup):
                 self.json_send(url_data.dict())
                 auth_request: schemas.AuthRequest = self.schema_unpack()
                 try:
-                    username = "mkyzubr"#str(input("\nUsername: ")) # take the username
-                    password = "Bossic#26"#getpass("Password: ") # take the password
+                    username = str(input("\nUsername: ")) # take the username
+                    password = getpass("Password: ") # take the password
                 except KeyboardInterrupt:
                     username, password = " ", " "
                     pass
@@ -159,8 +159,12 @@ class CLI(SO.SocketOpts, helpers.OperationsHelper, decorators.DecoratorSetup):
                 form = self.fillout_form(response.arguments_list)
                 filled_form = schemas.FormResponse(arguments_list=form)
             elif response.schema_type == 'AuthRequest':
-                username = input("Username: ")
-                password = getpass("Password: ")
+                if not response.secure_input:
+                    username = input("Username: ")
+                    password = getpass("Password: ")
+                else:
+                    username = None
+                    password = getpass("Password: ")
                 filled_form = schemas.AuthData(username=username, password=password)
             elif response.schema_type == "ConfirmationRequest":
                 print(response.message)

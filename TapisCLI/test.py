@@ -52,14 +52,14 @@ import time
 import sys
 
 
-# class Silly:
-#     def hellothree(self):
-#         while True:
-#             print("hello")
-#             time.sleep(0.5)
+class Silly:
+    def hellothree(self):
+        while True:
+            print("hello")
+            time.sleep(0.5)
 
 
-# silly = Silly()
+silly = Silly()
 # hellothread = KillableThread(target=silly.hellothree)
 # hellothread.start()
 # time.sleep(3)
@@ -81,10 +81,12 @@ import sys
 
 # initialize_server()
 
-def asddlf():
-    """
-    this function does silly things
-    """
-    pass
+# def asddlf():
+#     """
+#     this function does silly things
+#     """
+#     pass
 
-print(asddlf.__doc__)
+# print(asddlf.__doc__)
+func = silly.hellothree
+print(func.__code__.co_varnames[:func.__code__.co_argcount])

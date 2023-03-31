@@ -55,7 +55,11 @@ class Systems(tapisObject):
     def return_formatter(self, info):
         return f"id: {info.id}\nhost: {info.host}\n\n"
 
-    def get_systems(self, verbose: bool): # return a list of systems active on the account
+    def get_systems(self, verbose: bool):
+        """
+        @help: Gets and returns the list of systems the current Tapis service and account have access to
+        @doc: this is an example of the doc segment of the docstring
+        """
         systems = self.t.systems.getSystems()
         if systems and verbose:
             return str(systems)

@@ -71,8 +71,15 @@ class RequiresExpression(BaseRequirementDecorator):
     
 
 class SecureInput(BaseRequirementDecorator):
-    def __call__(self):
-        pass
+    def __call__(self, obj, *args, **kwargs):
+        fields = list(helpers.get_parameters(self.function))
+        if 'password' in fields:
+            secure_input_request = schemas.AuthRequest(secure_input=True)
+            self.json_send(secure_input_request.dict())
+            secure_input_data: schemas.AuthData = self.schema_unpack()
+            kwargs['password'] = secure_input_data.password
+            return self.function(**kwargs)
+        raise AttributeError(f"The function {self.function} does not contain a 'password' parameter")
 
 
 class Auth(BaseRequirementDecorator):

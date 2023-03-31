@@ -1,1 +1,5 @@
-make it so the auth only deals with the password, not the username. Overlap should be avoided.
+fix the help so that the server helps do not cause issues in display. Add help menus to access the tindividual tapis services help menus
+
+add an option to set default link to connect to for Tapis service, so that user doesnt have to enter it all the time
+
+on the first startup, have the user establish a config file through the command line

@@ -88,5 +88,24 @@ silly = Silly()
 #     pass
 
 # print(asddlf.__doc__)
-func = silly.hellothree
-print(func.__code__.co_varnames[:func.__code__.co_argcount])
+# func = silly.hellothree
+# print(func.__code__.co_varnames[:func.__code__.co_argcount])
+
+# import args
+
+
+# for parameters in args.Args.argparser_args.values():
+#     print(parameters["args"]); print(parameters["kwargs"])
+
+# class Silly:
+#     def dothing(self):
+#         print(self.__class__.__name__)
+
+
+# class doof(Silly):
+#     pass
+
+# d = doof()
+# d.dothing()
+
+import decorators

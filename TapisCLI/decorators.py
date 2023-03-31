@@ -2,6 +2,7 @@ import typing
 import socket
 import sys
 import time
+import functools
 from functools import update_wrapper, partial
 try:
     from . import helpers
@@ -23,16 +24,22 @@ class BaseRequirementDecorator(SocketOpts.SocketOpts, helpers.OperationsHelper):
         update_wrapper(self, func)
         self.function = func
         self.__code__ = func.__code__
+        self.__doc__ = func.__doc__
+        self.__name__ = func.__name__
         self.connection = BaseRequirementDecorator.connection
         self.username = BaseRequirementDecorator.username
         self.password = BaseRequirementDecorator.password
-
-    def __get__(self, obj, objtype):
+    
+    def __get__(self, obj, objtype): 
         """Support instance methods."""
-        return partial(self.__call__, obj)
+        part = partial(self.__call__, obj)
+        part.__code__ = self.__code__
+        part.__doc__ = self.__doc__
+        part.__name__ = self.__name__
+        return part
     
     def __repr__(self):
-        return self.function
+        return str(self.function)
     
     def __str__(self):
         return str(self.function)
@@ -62,6 +69,11 @@ class RequiresExpression(BaseRequirementDecorator):
 
         return self.function(obj, **kwargs)
     
+
+class SecureInput(BaseRequirementDecorator):
+    def __call__(self):
+        pass
+
 
 class Auth(BaseRequirementDecorator):
     def __call__(self, obj, *args, **kwargs):

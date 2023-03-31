@@ -20,11 +20,13 @@ try:
     from . import SocketOpts as SO
     from . import helpers
     from . import decorators
+    from . import args
 except:
     import schemas
     import SocketOpts as SO
     import helpers
     import decorators
+    import args
 
 
 class CLI(SO.SocketOpts, helpers.OperationsHelper, decorators.DecoratorSetup):
@@ -39,19 +41,9 @@ class CLI(SO.SocketOpts, helpers.OperationsHelper, decorators.DecoratorSetup):
         # set up argparse
         self.parser = argparse.ArgumentParser(description="Command Line Argument Parser", exit_on_error=False, usage=SUPPRESS)
         self.parser.add_argument('command_group')
-        self.parser.add_argument('-c', '--command')
-        self.parser.add_argument('-i', '--id')
-        self.parser.add_argument('-t', '--template')
-        self.parser.add_argument('-u', '--username')
-        self.parser.add_argument('-L', '--level')
-        self.parser.add_argument('-v', '--version')
-        self.parser.add_argument('-F', '--file')
-        self.parser.add_argument('-n', '--name')
-        self.parser.add_argument('--uuid')
-        self.parser.add_argument('-d', '--description')
-        self.parser.add_argument('-p', '--password')
-        self.parser.add_argument('-e', '--expression')
-        self.parser.add_argument('-V', '--verbose', action='store_true')
+
+        for parameters in args.Args.argparser_args.values():
+            self.parser.add_argument(*parameters["args"], **parameters["kwargs"])
 
     def initialize_server(self): 
         """
@@ -89,13 +81,13 @@ class CLI(SO.SocketOpts, helpers.OperationsHelper, decorators.DecoratorSetup):
         """
         connect to the local server
         """
-        self.connection_initialization() # connect to the server
-        #self.connection.connect((self.ip, self.port)) # enable me for debugging. Requires manual server start
+        #self.connection_initialization() # connect to the server
+        self.connection.connect((self.ip, self.port)) # enable me for debugging. Requires manual server start
         connection_info: schemas.StartupData = self.schema_unpack() # receive info from the server whether it is a first time connection
         if connection_info.initial: # if the server is receiving its first connection for the session\
             while True:
                 try:
-                    url = str(input("\nEnter the link for the tapis service you are connecting to: "))
+                    url = "https://icicle.tapis.io"#str(input("\nEnter the link for the tapis service you are connecting to: "))
                 except KeyboardInterrupt:
                     url = " "
                     pass
@@ -103,8 +95,8 @@ class CLI(SO.SocketOpts, helpers.OperationsHelper, decorators.DecoratorSetup):
                 self.json_send(url_data.dict())
                 auth_request: schemas.AuthRequest = self.schema_unpack()
                 try:
-                    username = str(input("\nUsername: ")) # take the username
-                    password = getpass("Password: ") # take the password
+                    username = "mkyzubr"#str(input("\nUsername: ")) # take the username
+                    password = "Bossic#26"#getpass("Password: ") # take the password
                 except KeyboardInterrupt:
                     username, password = " ", " "
                     pass

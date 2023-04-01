@@ -36,15 +36,33 @@ class DynamicHelpUtility:
     dynamically generate the help menu based on the doc  string and function arguments using .__doc__ and .__code__
     to generate helps for each command, iterate over the command map of the selected tapis wrapper object, and generate separate help menu for each
     """
-    def __locate_docstring_help(self, func: typing.Callable, command_name: str) -> str:
-        docstring_components = func.__doc__.split("@")
+    def __locate_docstring_help(self, func: typing.Callable | object, command_name: str) -> str:
+        docstring_components = func.__doc__
+        if docstring_components:
+            docstring_components = docstring_components.split("@")
+        else:
+            raise exceptions.HelpDoesNotExist(command_name)
         for docstring_component in docstring_components:
             if re.match(r'^[^:]+', docstring_component).group(0) == "help":
                 return docstring_component.split("help: ")[1]
         else:
             raise exceptions.HelpDoesNotExist(command_name)
-            
-    def help_generation(self) -> dict:
+        
+    def __server_commands_help_gen(self, map: dict) -> dict:
+        help = dict()
+        for command_name, command in map.items():
+            command_help = dict()
+            command_help['command_name'] = command_name
+            command_help['description'] = self.__locate_docstring_help(command, command_name)
+            if map == self.command_map:
+                help_str = f"{self.__class__.__name__.lower()}"
+            else:
+                help_str = f"{self.__class__.__name__.lower()} -c help"
+            command_help['syntax'] = help_str
+            help[command_name] = command_help
+        return help
+
+    def __tapis_service_commands_help_gen(self) -> dict:
         help_menu = dict()
         for command_name, command in self.command_map.items():
             command_help = dict()
@@ -57,8 +75,14 @@ class DynamicHelpUtility:
                     argument_help += f" {command_parameters[argument]['args'][1]} <{argument}>"
             command_help['syntax'] = argument_help
             help_menu[command_name] = command_help
-        print(help_menu)
         return help_menu
+            
+    def help_generation(self) -> dict:
+        if self.__class__.__name__ != 'Server': 
+            return self.__tapis_service_commands_help_gen()
+        else:
+            return self.__server_commands_help_gen(map=self.command_group_map).update(self.__server_commands_help_gen(map=self.command_map))
+    
 
 class KillableThread(threading.Thread):
     def __init__(self, *args, **keywords):

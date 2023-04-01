@@ -199,7 +199,7 @@ class Server(SO.SocketOpts, helpers.OperationsHelper, decorators.DecoratorSetup,
     
     def help(self):
         """
-        @help: returns help for the command groups and stuff
+        @help: returns help information. To get specific help information for tapis services, you can run <service> -c help
         """
         return self.help
 

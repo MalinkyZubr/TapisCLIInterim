@@ -81,8 +81,8 @@ class CLI(SO.SocketOpts, helpers.OperationsHelper, decorators.DecoratorSetup):
         """
         connect to the local server
         """
-        #self.connection_initialization() # connect to the server
-        self.connection.connect((self.ip, self.port)) # enable me for debugging. Requires manual server start
+        self.connection_initialization() # connect to the server
+        #self.connection.connect((self.ip, self.port)) # enable me for debugging. Requires manual server start
         connection_info: schemas.StartupData = self.schema_unpack() # receive info from the server whether it is a first time connection
         if connection_info.initial: # if the server is receiving its first connection for the session\
             while True:
@@ -112,6 +112,7 @@ class CLI(SO.SocketOpts, helpers.OperationsHelper, decorators.DecoratorSetup):
                         sys.exit(0)
                     continue
 
+        print(f"[+] Connected to the Tapis service at {connection_info.url}")
         return connection_info.username, connection_info.url # return the username and url
 
     @TypeEnforcer.enforcer(recursive=True)

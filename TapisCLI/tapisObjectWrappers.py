@@ -45,6 +45,9 @@ class tapisObject(helpers.OperationsHelper, decorators.DecoratorSetup, helpers.D
 
 
 class Systems(tapisObject):
+    """
+    @help: Access Tapis systems through the connected service
+    """
     def __init__(self, tapis_instance, username, password, connection):
         command_map = {
             'get_systems':self.get_systems,
@@ -156,6 +159,9 @@ class Neo4jCLI(tapisObject):
 
 
 class Pods(tapisObject):
+    """
+    @help: Access Tapis pods through the connected service
+    """
     def __init__(self, tapis_instance, username, password, connection):
         command_map = {
                 'get_pods':self.get_pods,
@@ -259,6 +265,9 @@ class Pods(tapisObject):
 
 
 class Files(tapisObject):
+    """
+    @help: Access Tapis files through the connected service
+    """
     def __init__(self, tapis_instance, username, password, connection):
         command_map = {
             'list_files':self.list_files,
@@ -308,6 +317,9 @@ class Files(tapisObject):
 
 
 class Apps(tapisObject):
+    """
+    @help: Access Tapis systems through the connected service
+    """
     def __init__(self, tapis_instance, username, password, connection):
         command_map = {
             'create_app':self.create_app,

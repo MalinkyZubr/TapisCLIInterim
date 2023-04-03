@@ -22,7 +22,6 @@ schema_types: dict = {
 
 
 class SocketOpts:
-    @TypeEnforcer.enforcer(recursive=True)
     def json_receive(self) -> str | list | dict: # Receive and unpack json 
         json_data = ""
         while True:
@@ -32,12 +31,10 @@ class SocketOpts:
             except ValueError:
                 continue
     
-    @TypeEnforcer.enforcer(recursive=True)
     def json_send(self, data: dict | list | str): # package data in json and send
         json_data = json.dumps(data)
         self.connection.send(json_data.encode())
 
-    @TypeEnforcer.enforcer(recursive=True)
     def schema_unpack(self):
         data = self.json_receive()
         schema_type = schema_types[data['schema_type']]

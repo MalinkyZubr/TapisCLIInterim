@@ -26,8 +26,6 @@ class tapisObject(helpers.OperationsHelper, decorators.DecoratorSetup, helpers.D
         self.connection = connection
 
         self.command_map = command_map
-
-        self.configure_decorators()
         
         if self.command_map:
             self.help = self.help_generation()

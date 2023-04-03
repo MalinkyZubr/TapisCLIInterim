@@ -97,7 +97,6 @@ class Server(SO.SocketOpts, helpers.OperationsHelper, decorators.DecoratorSetup,
             'switch_service':self.tapis_init
         }
         self.help = self.help_generation()
-        print(self.help)
 
     @decorators.Auth
     def tapis_init(self, username: str, password: str, name: str) -> tuple[typing.Any, str, str] | None:  # name is the baseURL
@@ -161,6 +160,7 @@ class Server(SO.SocketOpts, helpers.OperationsHelper, decorators.DecoratorSetup,
                     username, password = auth_data.username, auth_data.password
 
                     self.configure_decorators()
+
                     self.tapis_init(name=url, username=username, password=password)
                     # send to confirm to the CLI that authentication succeeded
                     self.logger.info("Verification success")

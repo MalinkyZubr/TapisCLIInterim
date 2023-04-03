@@ -46,6 +46,9 @@ class BaseRequirementDecorator(SocketOpts.SocketOpts, helpers.OperationsHelper):
 
 
 class RequiresForm(BaseRequirementDecorator):
+    def __init__(self, func):
+        super().__init__(func)
+
     def __call__(self, obj, *args, **kwargs):
         fields = list(helpers.get_parameters(self.function))
         if not fields:
@@ -58,6 +61,9 @@ class RequiresForm(BaseRequirementDecorator):
 
 
 class RequiresExpression(BaseRequirementDecorator):
+    def __init__(self, func):
+        super().__init__(func)
+
     def __call__(self, obj, *args, **kwargs):
         fields = list(helpers.get_parameters(self.function))
         if 'expression' not in fields:
@@ -71,6 +77,9 @@ class RequiresExpression(BaseRequirementDecorator):
     
 
 class SecureInput(BaseRequirementDecorator):
+    def __init__(self, func):
+        super().__init__(func)
+
     def __call__(self, obj, *args, **kwargs):
         fields = list(helpers.get_parameters(self.function))
         if 'password' in fields:
@@ -83,6 +92,9 @@ class SecureInput(BaseRequirementDecorator):
 
 
 class Auth(BaseRequirementDecorator):
+    def __init__(self, func):
+        super().__init__(func)
+
     def __call__(self, obj, *args, **kwargs):
         if self.function.__name__ == 'tapis_init' and kwargs['username'] and kwargs['password']:
             return self.function(obj, **kwargs)
@@ -103,6 +115,9 @@ class Auth(BaseRequirementDecorator):
 
 
 class NeedsConfirmation(BaseRequirementDecorator):
+    def __init__(self, func):
+        super().__init__(func)
+
     def __call__(self, obj, *args, **kwargs):
         confirmation_request = schemas.ConfirmationRequest(message=f"You requested to {self.function.__name__}. Please confirm (y/n)")
         self.json_send(confirmation_request.dict())
@@ -114,12 +129,10 @@ class NeedsConfirmation(BaseRequirementDecorator):
     
 
 class DecoratorSetup:
-    decorators_list = [RequiresForm, Auth, NeedsConfirmation, RequiresExpression]
     def configure_decorators(self):
-        for decorator in DecoratorSetup.decorators_list:
-            decorator.connection = self.connection
-            decorator.username = self.username
-            decorator.password = self.password
+        BaseRequirementDecorator.connection = self.connection
+        BaseRequirementDecorator.username = self.username
+        BaseRequirementDecorator.password = self.password
     
 
 class AnimatedLoading:

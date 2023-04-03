@@ -84,10 +84,10 @@ class Server(SO.SocketOpts, helpers.OperationsHelper, decorators.DecoratorSetup,
         # instantiate the subsystems
         self.logger.info('initialization complete')
         self.command_group_map = {
-            'pods':self.pods.cli,
-            'systems':self.systems.cli,
-            'files':self.files.cli,
-            'apps':self.apps.cli
+            'pods':self.pods,
+            'systems':self.systems,
+            'files':self.files,
+            'apps':self.apps
         }
         self.command_map = {
             'help':self.help,
@@ -97,6 +97,7 @@ class Server(SO.SocketOpts, helpers.OperationsHelper, decorators.DecoratorSetup,
             'switch_service':self.tapis_init
         }
         self.help = self.help_generation()
+        print(self.help)
 
     @decorators.Auth
     def tapis_init(self, username: str, password: str, name: str) -> tuple[typing.Any, str, str] | None:  # name is the baseURL

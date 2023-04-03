@@ -32,7 +32,7 @@ class tapisObject(helpers.OperationsHelper, decorators.DecoratorSetup, helpers.D
         if self.command_map:
             self.help = self.help_generation()
 
-    def cli(self, **kwargs):
+    def __call__(self, **kwargs):
         command = self.command_map[kwargs['command']]
         kwargs = self.filter_kwargs(command, kwargs)
         return command(**kwargs)

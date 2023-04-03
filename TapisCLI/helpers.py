@@ -5,6 +5,8 @@ from TypeEnforcement.type_enforcer import TypeEnforcer
 import re
 import json
 import argparse
+from urllib.request import urlopen
+import socket
 try:
     from . import exceptions
     from . import args
@@ -55,9 +57,9 @@ class DynamicHelpUtility:
             command_help['command_name'] = command_name
             command_help['description'] = self.__locate_docstring_help(command, command_name)
             if map == self.command_map:
-                help_str = f"{self.__class__.__name__.lower()}"
+                help_str = f"{command_name}"
             else:
-                help_str = f"{self.__class__.__name__.lower()} -c help"
+                help_str = f"{command_name} -c help"
             command_help['syntax'] = help_str
             help[command_name] = command_help
         return help
@@ -81,7 +83,7 @@ class DynamicHelpUtility:
         if self.__class__.__name__ != 'Server': 
             return self.__tapis_service_commands_help_gen()
         else:
-            return self.__server_commands_help_gen(map=self.command_group_map).update(self.__server_commands_help_gen(map=self.command_map))
+            return self.__server_commands_help_gen(map=self.command_group_map), self.__server_commands_help_gen(map=self.command_map)
     
 
 class KillableThread(threading.Thread):

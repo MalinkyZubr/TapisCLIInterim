@@ -19,7 +19,7 @@ command_parameters = args.Args.argparser_args
 
 
 def get_parameters(func):
-    args = func.__code__.co_varnames[:func.__code__.co_argcount]
+    args = list(func.__code__.co_varnames[:func.__code__.co_argcount])
     if args[0] == "self":
         args = args[1:]
     return args
@@ -29,8 +29,13 @@ class OperationsHelper:
         filtered = dict()
         variables = list(get_parameters(func))
         for arg in variables:
-            filtered.update({arg:kwargs[arg]})
+            if arg != "password": filtered.update({arg:kwargs[arg]})
+            else: filtered.update({'password':None})
         return filtered
+
+    def print_dict(self, dict_):
+        for key, value in dict_.items():
+            print(f"{key}: {value}")
     
 
 class DynamicHelpUtility:
@@ -64,14 +69,20 @@ class DynamicHelpUtility:
             help[command_name] = command_help
         return help
 
-    def __tapis_service_commands_help_gen(self) -> dict:
+    def __tapis_service_commands_help_gen(self, map) -> dict:
         help_menu = dict()
-        for command_name, command in self.command_map.items():
+        for command_name, command in map.items():
             command_help = dict()
             command_help['command_name'] = command_name
             command_help['description'] = self.__locate_docstring_help(command, command_name)
             arguments = get_parameters(command)
-            argument_help = f"{self.__class__.__name__.lower()} -c {command_name}"
+            if self.__class__.__name__ != 'Server': 
+                argument_help = f"{self.__class__.__name__.lower()} -c {command_name}"
+            else:
+                if map == self.command_map:
+                    argument_help = f"{command_name}"
+                else:
+                    argument_help = f"{command_name} -c help"
             for argument in arguments:
                 if argument != "password":
                     argument_help += f" {command_parameters[argument]['args'][1]} <{argument}>"
@@ -81,7 +92,7 @@ class DynamicHelpUtility:
             
     def help_generation(self) -> dict:
         if self.__class__.__name__ != 'Server': 
-            return self.__tapis_service_commands_help_gen()
+            return self.__tapis_service_commands_help_gen(map=self.command_map)
         else:
             return self.__server_commands_help_gen(map=self.command_group_map), self.__server_commands_help_gen(map=self.command_map)
     
